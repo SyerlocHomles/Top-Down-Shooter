@@ -1,17 +1,17 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Ultimate Balance", layout="centered")
-st.title("⚔️ Island.io: Ultimate Balance")
+st.set_page_config(page_title="Island.io: Boss Lockdown", layout="centered")
+st.title("⚔️ Island.io: Boss Battle 500")
 
 if "char" not in st.session_state:
     st.session_state.char = None
 
 cols = st.columns(3)
 classes = [
-    ("🔵 Assault (Kill to Charge)", "#00a2e8", 3, 4.5, "assault"),
-    ("🟢 Tank (10s Cooldown)", "#2ecc71", 6, 3.0, "tank"),
-    ("🟡 Scout (20s Cooldown)", "#f1c40f", 2, 6.8, "scout")
+    ("🔵 Assault (Kill Charge)", "#00a2e8", 3, 4.5, "assault"),
+    ("🟢 Tank (10s CD)", "#2ecc71", 6, 3.0, "tank"),
+    ("🟡 Scout (20s CD)", "#f1c40f", 2, 6.8, "scout")
 ]
 
 for i, (name, col, hp, spd, t) in enumerate(classes):
@@ -32,15 +32,16 @@ game_html = f"""
     </div>
     
     <div style="margin: 0 auto 10px; width: 250px;">
-        <div id="ui-skill-text" style="color:#00e5ff; font-size: 11px; font-weight:bold;">ULTIMATE STATUS</div>
+        <div id="ui-skill-text" style="color:#00e5ff; font-size: 11px; font-weight:bold;">ULTIMATE READY (SPACE)</div>
         <div style="width:100%; height:12px; background:#333; border-radius:6px; overflow:hidden; border: 1px solid #555;">
-            <div id="skill-bar" style="width:0%; height:100%; background: linear-gradient(90deg, #ff8c00, #ffea00);"></div>
+            <div id="skill-bar" style="width:0%; height:100%; background: linear-gradient(90deg, #ff8c00, #00e5ff);"></div>
         </div>
     </div>
     <div id="buff-ui" style="color:#f1c40f; font-size:12px; font-weight:bold; min-height:15px; margin-bottom:5px;"></div>
 
-    <div id="upgrade-menu" style="display:none; position:absolute; width:100%; height:100%; top:0; left:0; background:rgba(0,0,0,0.95); z-index:1000; border-radius:11px;">
+    <div id="upgrade-menu" style="display:none; position:absolute; width:100%; height:100%; top:0; left:0; background:rgba(0,0,0,0.96); z-index:1000; border-radius:11px;">
         <h2 style="color:white; margin-top:100px;">⬆️ BOSS DEFEATED!</h2>
+        <p style="color:#2ecc71;">Pilih Bonus Permanen:</p>
         <button onclick="window.applyUpgrade('hp')" style="padding:12px 24px; background:#2ecc71; color:white; border:none; margin:10px; border-radius:8px; cursor:pointer; font-weight:bold;">+1 NYAWA</button>
         <button onclick="window.applyUpgrade('dmg')" style="padding:12px 24px; background:#e74c3c; color:white; border:none; margin:10px; border-radius:8px; cursor:pointer; font-weight:bold;">+1 DAMAGE</button>
     </div>
@@ -56,9 +57,8 @@ game_html = f"""
           uBuff = document.getElementById('buff-ui'), uMenu = document.getElementById('upgrade-menu');
 
     let score = 0, health = {st.session_state.char['hp']}, level = 1, gameOver = false;
-    let keys = {{}}, bullets = [], eBullets = [], enemies = [], walls = [], items = [], particles = [], boss = null;
+    let keys = {{}}, bullets = [], enemies = [], walls = [], items = [], particles = [], boss = null;
     
-    // player.sM (Max Skill Points) = 100
     let player = {{
         x: 300, y: 200, r: 12, speed: {st.session_state.char['spd']},
         type: '{st.session_state.char['type']}', color: '{st.session_state.char['col']}',
@@ -77,9 +77,9 @@ game_html = f"""
 
     function initWalls() {{
         walls = [];
-        let count = Math.max(12 - (level * 2), 4);
+        let count = Math.max(14 - (level * 2), 5);
         let attempts = 0;
-        while(walls.length < count && attempts < 100) {{
+        while(walls.length < count && attempts < 150) {{
             attempts++;
             let w = 40, h = 40;
             let x = 50 + Math.floor(Math.random() * 10) * 50;
@@ -87,8 +87,8 @@ game_html = f"""
             if(Math.hypot(x+w/2-300, y+h/2-200) < 80) continue;
             let tooClose = false;
             for(let wall of walls) {{
-                if(x < wall.x + wall.w + 25 && x + w + 25 > wall.x &&
-                   y < wall.y + wall.h + 25 && y + h + 25 > wall.y) {{ tooClose = true; break; }}
+                if(x < wall.x + wall.w + 30 && x + w + 30 > wall.x &&
+                   y < wall.y + wall.h + 30 && y + h + 30 > wall.y) {{ tooClose = true; break; }}
             }}
             if(!tooClose) walls.push({{x,y,w,h}});
         }}
@@ -107,8 +107,8 @@ game_html = f"""
 
     function triggerRespawn() {{
         health--;
-        spawnExplosion(player.x, player.y, "#ff0000");
-        player.inv = 180;
+        spawnExplosion(player.x, player.y, "#ffffff");
+        player.inv = 180; // 3s kebal
         if(health <= 0) gameOver = true;
     }}
 
@@ -119,14 +119,14 @@ game_html = f"""
 
     function useUlt() {{
         if(player.sT < player.sM || gameOver || player.inv > 0) return;
-        player.sT = 0; 
+        player.sT = 0;
         if(player.type==='assault') {{
             for(let i=0; i<12; i++) setTimeout(()=>fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), true, true), i*100);
         }} else if(player.type==='tank') {{
             player.shield=true; setTimeout(()=>player.shield=false, 6000);
         }} else if(player.type==='scout') {{
             let a = Math.atan2(my-player.y, mx-player.x);
-            let tx = player.x + Math.cos(a)*200, ty = player.y + Math.sin(a)*200;
+            let tx = player.x + Math.cos(a)*180, ty = player.y + Math.sin(a)*180;
             if(!isInsideWall(tx, ty, player.r)) {{ player.x=tx; player.y=ty; spawnExplosion(tx,ty,player.color); }}
         }}
     }}
@@ -152,16 +152,11 @@ game_html = f"""
         if(!isInsideWall(nx, player.y, player.r)) player.x=nx;
         if(!isInsideWall(player.x, ny, player.r)) player.y=ny;
 
-        // --- NEW ULTIMATE RECHARGE LOGIC ---
-        if(player.type === 'tank') {{
-            if(player.sT < player.sM) player.sT += (100 / (10 * 60)); // 10 Detik
-        }} else if(player.type === 'scout') {{
-            if(player.sT < player.sM) player.sT += (100 / (20 * 60)); // 20 Detik
-        }}
-        // Assault (player.type === 'assault') is manually added in enemy death logic
-
+        // Ultimate Recharge
+        if(player.type === 'tank') player.sT = Math.min(100, player.sT + (100/(10*60)));
+        if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100/(20*60)));
         uBar.style.width = Math.min(100, player.sT) + '%';
-        uBar.style.background = player.sT >= 100 ? '#00ffcc' : 'linear-gradient(90deg, #ff8c00, #ffea00)';
+        uBar.style.background = player.sT >= 100 ? '#00e5ff' : '#ff8c00';
 
         if(player.buffs.speed > 0) player.buffs.speed--;
         if(player.buffs.triple > 0) player.buffs.triple--;
@@ -174,10 +169,10 @@ game_html = f"""
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.rk?player.dmg*4:player.dmg;
                         if(e.hp<=0) {{ 
-                            // Add Kill-based Ultimate points
                             if(player.type === 'assault') player.sT = Math.min(100, player.sT + 10);
-                            if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100 / 20)); // +1 detik per kill
-
+                            if(player.type === 'scout') player.sT = Math.min(100, player.sT + 5); 
+                            
+                            // LOGIC 14: Selama boss ada, poin tidak bertambah
                             if(!boss) {{
                                 if(e.color==='#9b59b6') score+=10;
                                 else if(e.color==='#e74c3c') score+=5;
@@ -189,9 +184,7 @@ game_html = f"""
                     }}
                 }}
                 if(boss && b.x > boss.x && b.x < boss.x+boss.w && b.y > boss.y && b.y < boss.y+boss.h) {{
-                    if(boss.sh) boss.hp = Math.min(boss.mH, boss.hp + (level>=5?2:1));
-                    else boss.hp -= player.dmg;
-                    return false;
+                    boss.hp -= player.dmg; return false;
                 }}
             }} else {{
                 if(Math.hypot(player.x-b.x, player.y-b.y) < player.r+b.r) {{
@@ -206,10 +199,6 @@ game_html = f"""
             let a = Math.atan2(player.y-e.y, player.x-e.x);
             let vx=Math.cos(a)*e.sp, vy=Math.sin(a)*e.sp;
             if(!isInsideWall(e.x+vx, e.y+vy, e.s/2)) {{ e.x+=vx; e.y+=vy; }}
-            else {{
-                if(!isInsideWall(e.x+vy, e.y-vx, e.s/2)) {{ e.x+=vy; e.y-=vx; }}
-                else if(!isInsideWall(e.x-vy, e.y+vx, e.s/2)) {{ e.x-=vy; e.y+=vx; }}
-            }}
             e.fT++;
             if(e.fT > 300) {{
                 if((e.color==='#e74c3c' && level>=2) || (e.color==='#2ecc71' && level>=3)) fire(e.x, e.y, a, false, false);
@@ -218,20 +207,21 @@ game_html = f"""
             if(Math.hypot(player.x-e.x, player.y-e.y) < player.r+e.s/2 && player.inv<=0 && !player.shield) triggerRespawn();
         }});
 
+        // FIXED LOGIC: Boss muncul di skor 500
         if(score >= 500 && !boss) {{
-            boss = {{x:250, y:-100, w:90, h:90, hp:600*level, mH:600*level, fT:0, uT:0, sh:false}};
+            boss = {{x:250, y:50, w:80, h:80, hp:800*level, mH:800*level, fT:0}};
+            spawnExplosion(300, 200, "#ff0000");
         }}
+
         if(boss) {{
             let a = Math.atan2(player.y-(boss.y+boss.h/2), player.x-(boss.x+boss.w/2));
             let bvx=Math.cos(a)*1.1, bvy=Math.sin(a)*1.1;
             if(!isInsideWall(boss.x+bvx+boss.w/2, boss.y+bvy+boss.h/2, boss.w/2)) {{ boss.x+=bvx; boss.y+=bvy; }}
             boss.fT++;
-            if(boss.fT > 120) {{
-                let shots = level>=4?3:level>=2?2:1;
-                for(let i=0; i<shots; i++) fire(boss.x+boss.w/2, boss.y+boss.h/2, a+(i*0.25-0.12), false, false);
+            if(boss.fT > 100) {{
+                fire(boss.x+boss.w/2, boss.y+boss.h/2, a, false, false);
                 boss.fT = 0;
             }}
-            boss.sh = boss.hp < boss.mH*0.4;
             if(boss.hp <= 0) {{ boss=null; uMenu.style.display='block'; }}
         }}
 
@@ -241,8 +231,7 @@ game_html = f"""
                 ex = 50 + Math.random() * 500;
                 ey = 50 + Math.random() * 300;
                 dist = Math.hypot(player.x - ex, player.y - ey);
-            }} while (isInsideWall(ex, ey, 25) || dist < 150);
-
+            }} while (isInsideWall(ex, ey, 25) || dist < 180);
             let r = Math.random();
             let t = r<0.4 ? {{c:'#e74c3c', s:20, sp:1.4, h:5}} : r<0.7 ? {{c:'#2ecc71', s:28, sp:0.7, h:12}} : {{c:'#9b59b6', s:18, sp:2.2, h:4}};
             enemies.push({{x:ex, y:ey, color:t.c, s:t.s, sp:t.sp, hp:t.h, fT:0}});
@@ -260,6 +249,7 @@ game_html = f"""
         if(player.inv > 0) player.inv--;
         uScore.innerText = "Skor: " + score;
         uHP.innerText = "❤️".repeat(Math.max(0,health));
+        uLvl.innerText = "LEVEL: " + level;
         let bt = [];
         if(player.buffs.speed>0) bt.push("⚡ SPEED: " + Math.ceil(player.buffs.speed/60) + "s");
         if(player.buffs.triple>0) bt.push("🔫 TRIPLE: " + Math.ceil(player.buffs.triple/60) + "s");
@@ -268,18 +258,18 @@ game_html = f"""
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
-        walls.forEach(w => {{ ctx.fillStyle='#444'; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.strokeStyle='#555'; ctx.strokeRect(w.x,w.y,w.w,w.h); }});
+        walls.forEach(w => {{ ctx.fillStyle='#444'; ctx.fillRect(w.x, w.y, w.w, w.h); }});
         items.forEach(it => {{ ctx.fillStyle=it.t==='speed'?'#3498db':'#f1c40f'; ctx.beginPath(); ctx.arc(it.x,it.y,10,0,7); ctx.fill(); }});
         bullets.forEach(b => {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }});
         enemies.forEach(e => {{ ctx.fillStyle=e.color; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); }});
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
         if(boss) {{
-            ctx.fillStyle=boss.sh?'#00e5ff':'#ff4d4d'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+            ctx.fillStyle='#ff4d4d'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x, boss.y-12, (boss.hp/boss.mH)*boss.w, 8);
         }}
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             ctx.fillStyle=player.color; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,7); ctx.fill();
-            if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(player.x,player.y,player.r+6,0,7); ctx.stroke(); }}
+            if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(player.x,player.y,player.r+8,0,7); ctx.stroke(); }}
         }}
         if(gameOver) {{ ctx.fillStyle='white'; ctx.font='40px Arial'; ctx.textAlign='center'; ctx.fillText("GAME OVER", 300, 200); }}
     }}

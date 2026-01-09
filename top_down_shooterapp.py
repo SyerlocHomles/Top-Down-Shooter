@@ -1,24 +1,24 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Island.io: Chaos", layout="centered")
-st.title("🌪️ Island.io: Random Chaos")
-st.write("Musuh spawn acak! WASD untuk gerak, Klik Mouse untuk nembak.")
+st.set_page_config(page_title="Island.io: 3 Lives", layout="centered")
+st.title("🛡️ Island.io: Survivor")
+st.write("Kamu punya **3 Nyawa**! Gunakan WASD dan Klik Mouse untuk bertahan.")
 
 game_html = """
 <div style="text-align: center; position: relative;">
-    <h2 id="scB">Skor: 0</h2>
-    <canvas id="gC" width="600" height="400" style="border:5px solid #2c3; background:#ecf0f1; border-radius:10px; cursor:crosshair;"></canvas>
+    <h2 id="stats">Skor: 0 | Nyawa: ❤️❤️❤️</h2>
+    <canvas id="gC" width="600" height="400" style="border:5px solid #2c3e50; background:#ecf0f1; border-radius:10px; cursor:crosshair;"></canvas>
     <div id="gO" style="display:none; position:absolute; top:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.9); color:white; padding:30px; border-radius:15px; border:3px solid red; z-index:100;">
-        <h1>DIHANTAM MUSUH! 💀</h1>
-        <button onclick="location.reload()" style="padding:10px 20px; font-size:18px; cursor:pointer; background:#27ae60; color:white; border:none; border-radius:5px;">MAIN LAGI 🔄</button>
+        <h1>GAME OVER! 💀</h1>
+        <button onclick="location.reload()" style="padding:10px 20px; font-size:18px; cursor:pointer; background:#27ae60; color:white; border:none; border-radius:5px;">COBA LAGI 🔄</button>
     </div>
 </div>
 <script>
     const cvs = document.getElementById("gC"), ctx = cvs.getContext("2d");
-    const scB = document.getElementById("scB"), gOS = document.getElementById("gO");
-    let score = 0, isGO = false, keys = {}, mX = 0, mY = 0;
-    let ply = { x: 300, y: 200, s: 12, c: "#00a2e8", spd: 4 };
+    const stats = document.getElementById("stats"), gOS = document.getElementById("gO");
+    let score = 0, lives = 3, isGO = false, keys = {}, mX = 0, mY = 0;
+    let ply = { x: 300, y: 200, s: 12, c: "#00a2e8", spd: 4, invuln: 0 };
     let bullets = [], enemies = [], walls = [];
 
     window.onkeydown = (e) => keys[e.code] = true;
@@ -50,13 +50,14 @@ game_html = """
         if(keys["KeyW"]) ny -= ply.spd; if(keys["KeyS"]) ny += ply.spd;
         if(keys["KeyA"]) nx -= ply.spd; if(keys["KeyD"]) nx += ply.spd;
         if(!col(nx, ny, ply.s, walls)){ ply.x = Math.max(ply.s, Math.min(588, nx)); ply.y = Math.max(ply.s, Math.min(388, ny)); }
+        if(ply.invuln > 0) ply.invuln--;
 
         bullets.forEach((b, i) => {
             b.x += b.vx; b.y += b.vy;
             if(col(b.x, b.y, 2, walls) || b.x<0 || b.x>600 || b.y<0 || b.y>400) bullets.splice(i, 1);
             enemies.forEach((e, ei) => {
                 if(b.x > e.x && b.x < e.x+e.s && b.y > e.y && b.y < e.y+e.s){
-                    bullets.splice(i,1); enemies.splice(ei,1); score+=10; scB.innerText="Skor: "+score; spawnE();
+                    bullets.splice(i,1); enemies.splice(ei,1); score+=10; spawnE();
                 }
             });
         });
@@ -64,4 +65,4 @@ game_html = """
         enemies.forEach(e => {
             let nex = e.x, ney = e.y;
             if(e.x < ply.x) nex += 1.3; else nex -= 1.3;
-            if(e
+            if(e.

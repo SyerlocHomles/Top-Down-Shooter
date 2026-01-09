@@ -1,8 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Mega Update", layout="centered")
-st.title("🛡️ Island.io: Level & Upgrade System")
+st.set_page_config(page_title="Island.io: Pro Edition", layout="centered")
+st.title("🛡️ Island.io: Final Polish")
 
 if "char" not in st.session_state:
     st.session_state.char = None
@@ -32,7 +32,13 @@ game_html = f"""
         <div id="ui-score">Skor: 0</div>
         <div id="ui-hp">❤️❤️❤️</div>
     </div>
-    <div id="ui-skill" style="color:#00e5ff; font-weight:bold; margin:5px 0;">SKILL: READY (SPACE)</div>
+    
+    <div style="margin: 10px auto; width: 250px;">
+        <div id="ui-skill" style="color:#00e5ff; font-size: 12px; font-weight:bold; margin-bottom:4px;">SKILL CHARGING...</div>
+        <div style="width:100%; height:8px; background:#333; border-radius:4px; overflow:hidden; border: 1px solid #555;">
+            <div id="skill-fill" style="width:0%; height:100%; background:#00e5ff; transition: width 0.1s;"></div>
+        </div>
+    </div>
     
     <div id="store" style="display:none; position:absolute; width:580px; height:380px; background:rgba(0,0,0,0.85); z-index:10; color:white; padding-top:100px; border-radius:10px;">
         <h2>⬆️ LEVEL UP! Pilih Upgrade:</h2>
@@ -46,10 +52,11 @@ game_html = f"""
 
 <script>
     const cv=document.getElementById("c"), ctx=cv.getContext("2d");
-    const uiS=document.getElementById("ui-score"), uiH=document.getElementById("ui-hp"), uiL=document.getElementById("ui-lvl"), uiK=document.getElementById("ui-skill"), store=document.getElementById("store");
+    const uiS=document.getElementById("ui-score"), uiH=document.getElementById("ui-hp"), uiL=document.getElementById("ui-lvl"), 
+          uiK=document.getElementById("ui-skill"), uiF=document.getElementById("skill-fill"), store=document.getElementById("store");
     
-    let sc=0, li={c['hp']}, lvl=1, go=false, ks={{}}, buls=[], ebuls=[], enms=[], wls=[], itms=[], pX=[], boss=null, sk=0;
-    let ply={{x:300, y:200, s:12, inv:0, pw:null, pT:0, spd:{c['spd']}, col:'{c['col']}', type:'{c['type']}', sRdy:true, sT:0, sh:false, bDur:400, dmg:5}};
+    let sc=0, li={c['hp']}, lvl=1, go=false, ks={{}}, buls=[], ebuls=[], enms=[], wls=[], itms=[], pX=[], boss=null, mX=0, mY=0;
+    let ply={{x:300, y:200, s:12, inv:0, pw:null, pT:0, spd:{c['spd']}, col:'{c['col']}', type:'{c['type']}', sRdy:false, sT:0, mST:600, sh:false, bDur:400, dmg:5}};
     let wCount = 7;
 
     function applyUpgrade(type) {{
@@ -62,15 +69,13 @@ game_html = f"""
         requestAnimationFrame(draw);
     }}
 
-    window.onkeydown=(e)=>{{ 
-        ks[e.code]=true; 
-        if(e.code==="Space") useSkill(); 
-    }};
+    window.onkeydown=(e)=>{{ ks[e.code]=true; if(e.code==="Space") useSkill(); }};
     window.onkeyup=(e)=>ks[e.code]=false;
-    
+    cv.onmousemove=(e)=>{{ let r=cv.getBoundingClientRect(); mX=e.clientX-r.left; mY=e.clientY-r.top; }};
+
     cv.onmousedown=(e)=>{{
         if(go || store.style.display==='block') return; 
-        let r=cv.getBoundingClientRect(), a=Math.atan2((e.clientY-r.top)-ply.y, (e.clientX-r.left)-ply.x);
+        let a=Math.atan2(mY-ply.y, mX-ply.x);
         fire(ply.x, ply.y, a, 12, "#f1c40f", false);
         if(ply.pw === 'triple') {{ fire(ply.x, ply.y, a+0.22, 12, "#f1c40f", false); fire(ply.x, ply.y, a-0.22, 12, "#f1c40f", false); }}
     }};
@@ -81,22 +86,22 @@ game_html = f"""
 
     function useSkill() {{
         if(!ply.sRdy || go) return;
-        ply.sRdy = false; ply.sT = 600;
+        ply.sRdy = false; ply.sT = 0; 
 
         if(ply.type === 'assault') {{
-            for(let i=0; i<6; i++) setTimeout(()=>{{
-                let target = enms[0] || boss || {{x: Math.random()*600, y:0}};
-                let a = Math.atan2(target.y - ply.y, target.x - ply.x);
-                fire(ply.x, ply.y, a + (Math.random()-0.4), 9, "#ff4500", true);
-            }}, i*120);
+            for(let i=0; i<8; i++) setTimeout(()=>{{
+                let a = Math.atan2(mY - ply.y, mX - ply.x); // Ikuti kursor
+                fire(ply.x, ply.y, a + (Math.random()-0.5)*0.1, 15, "#ff4500", true);
+                spawnExplosion(ply.x, ply.y, "#ff4500", 2);
+            }}, i*100);
         }} else if(ply.type === 'tank') {{
             ply.sh = true; spawnExplosion(ply.x, ply.y, "#00e5ff", 20);
-            setTimeout(()=> ply.sh = false, 4000);
+            setTimeout(()=> ply.sh = false, 5000);
         }} else if(ply.type === 'scout') {{
-            let dx=0, dy=0;
-            if(ks["KeyW"]) dy-=100; if(ks["KeyS"]) dy+=100; if(ks["KeyA"]) dx-=100; if(ks["KeyD"]) dx+=100;
+            let a = Math.atan2(mY - ply.y, mX - ply.x);
+            let dx = Math.cos(a)*150, dy = Math.sin(a)*150;
             if(!isCol(ply.x+dx, ply.y+dy, ply.s, wls)) {{ ply.x+=dx; ply.y+=dy; }}
-            spawnExplosion(ply.x, ply.y, "#fff", 15);
+            spawnExplosion(ply.x, ply.y, "#fff", 20);
         }}
     }}
 
@@ -111,7 +116,7 @@ game_html = f"""
 
     function initMap() {{
         wls=[]; 
-        let count = Math.max(2, wCount - (lvl-1)); // Tembok berkurang tiap level
+        let count = Math.max(2, wCount - (lvl-1));
         for(let i=0; i<count; i++){{
             let w=Math.random()*60+40, h=Math.random()*60+40, x=Math.random()*450+50, y=Math.random()*250+50;
             if(Math.sqrt((x-ply.x)**2+(y-ply.y)**2)>120) wls.push({{x,y,w,h}});
@@ -120,17 +125,23 @@ game_html = f"""
 
     function update() {{
         if(go || store.style.display==='block') return;
-        if(sk>0) sk--;
-        if(ply.sT > 0) ply.sT--; else ply.sRdy = true;
+        
+        // Skill Charging Logic
+        if(ply.sT < ply.mST) ply.sT++;
+        else ply.sRdy = true;
+        
+        let sPct = (ply.sT / ply.mST) * 100;
+        uiF.style.width = sPct + "%";
+        uiF.style.background = ply.sRdy ? "#00ff88" : "#00e5ff";
+        uiK.innerText = ply.sRdy ? "SKILL READY (SPACE)" : "CHARGING ULTIMATE...";
+        uiK.style.color = ply.sRdy ? "#00ff88" : "#00e5ff";
 
-        // UI
         uiS.innerText = "Skor: " + sc;
         uiL.innerText = "LEVEL: " + lvl;
-        uiK.innerText = ply.sRdy ? "SKILL: READY (SPACE)" : "COOLDOWN: " + Math.ceil(ply.sT/60) + "s";
         let hText = ""; for(let i=0; i<li; i++) hText += "❤️";
         uiH.innerText = hText;
 
-        // Spawn Kroco (Makin tinggi level, makin banyak/cepat)
+        // Spawn Kroco
         if(enms.length < 3 + lvl) {{
             let rx=Math.random()*560+20, ry=Math.random()*360+20;
             if(!isCol(rx,ry,20,wls) && Math.sqrt((rx-ply.x)**2+(ry-ply.y)**2)>200)
@@ -145,29 +156,42 @@ game_html = f"""
         if(ply.inv>0) ply.inv--;
         if(ply.pT>0) {{ ply.pT--; if(ply.pT<=0) ply.pw=null; }}
 
-        // Boss Spawn at specific scores
+        // Boss
         if(sc >= lvl * 300 && !boss) boss={{x:300,y:50,s:65,h:500+(lvl*200),mH:500+(lvl*200),sp:0.6+(lvl*0.05),fT:0}};
 
         if(boss){{
             let dx=ply.x-boss.x, dy=ply.y-boss.y, d=Math.sqrt(dx*dx+dy*dy);
             if(!isCol(boss.x+(dx/d)*boss.sp, boss.y+(dy/d)*boss.sp, boss.s/2, wls)){{ boss.x+=(dx/d)*boss.sp; boss.y+=(dy/d)*boss.sp; }}
             boss.fT++;
-            if(boss.fT > (120 - (lvl*5))){{
-                for(let a=0; a<Math.PI*2; a+=0.7) ebuls.push({{x:boss.x+boss.s/2, y:boss.y+boss.s/2, vx:Math.cos(a)*5, vy:Math.sin(a)*5}});
+            if(boss.fT > (110 - (lvl*5))){{
+                for(let a=0; a<Math.PI*2; a+=0.75) ebuls.push({{x:boss.x+boss.s/2, y:boss.y+boss.s/2, vx:Math.cos(a)*5, vy:Math.sin(a)*5}});
                 boss.fT=0;
             }}
         }}
 
-        // Collision & Bullets
+        // AI Kroco Avoidance Logic (Anti-Stuck)
+        enms.forEach(e=>{{
+            let dx=ply.x-e.x, dy=ply.y-e.y, d=Math.sqrt(dx*dx+dy*dy);
+            let vx=(dx/d)*e.sp, vy=(dy/d)*e.sp;
+            
+            if(!isCol(e.x+vx, e.y+vy, e.s/2, wls)) {{
+                e.x += vx; e.y += vy;
+            }} else {{
+                // Jika terhalang, coba geser ke samping (90 derajat)
+                if(!isCol(e.x+vy, e.y-vx, e.s/2, wls)) {{ e.x += vy; e.y -= vx; }}
+                else if(!isCol(e.x-vy, e.y+vx, e.s/2, wls)) {{ e.x -= vy; e.y += vx; }}
+            }}
+            
+            if(ply.inv<=0 && !ply.sh && Math.sqrt((e.x-ply.x)**2+(e.y-ply.y)**2)<(e.s/2+ply.s)){{ li--; ply.inv=60; if(li<=0) go=true; }}
+        }});
+
+        // Projectiles
         buls.forEach((b,i)=>{{
             b.x+=b.vx; b.y+=b.vy;
             if(isCol(b.x,b.y,4,wls) || b.x<0 || b.x>600 || b.y<0 || b.y>400) {{ buls.splice(i,1); return; }}
             if(boss && b.x>boss.x && b.x<boss.x+boss.s && b.y>boss.y && b.y<boss.y+boss.s){{
-                boss.h -= b.r ? ply.dmg*4 : ply.dmg; spawnExplosion(b.x,b.y,"#ffa500",5); buls.splice(i,1);
-                if(boss.h<=0){{ 
-                    sc+=500; boss=null; spawnExplosion(300,200,"#fff",60);
-                    store.style.display = 'block'; // Triger Upgrade Store
-                }}
+                boss.h -= b.r ? ply.dmg*4 : ply.dmg; buls.splice(i,1);
+                if(boss.h<=0){{ sc+=500; boss=null; store.style.display='block'; }}
                 return;
             }}
             enms.forEach((e,ei)=>{{
@@ -180,17 +204,11 @@ game_html = f"""
 
         ebuls.forEach((eb,i)=>{{
             eb.x+=eb.vx; eb.y+=eb.vy;
-            if(isCol(eb.x, eb.y, 4, wls)) {{ ebuls.splice(i, 1); return; }}
+            if(isCol(eb.x, eb.y, 4, wls) || eb.x<0 || eb.x>600) {{ ebuls.splice(i, 1); return; }}
             if(Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s && ply.inv<=0){{
                 ebuls.splice(i,1);
-                if(!ply.sh) {{ li--; ply.inv=60; spawnExplosion(ply.x,ply.y,"#f00",20); if(li<=0) go=true; }}
+                if(!ply.sh) {{ li--; ply.inv=60; if(li<=0) go=true; }}
             }}
-        }});
-
-        enms.forEach(e=>{{
-            let dx=ply.x-e.x, dy=ply.y-e.y, d=Math.sqrt(dx*dx+dy*dy);
-            if(!isCol(e.x+(dx/d)*e.sp, e.y+(dy/d)*e.sp, e.s/2, wls)){{ e.x+=(dx/d)*e.sp; e.y+=(dy/d)*e.sp; }}
-            if(ply.inv<=0 && !ply.sh && Math.sqrt((e.x-ply.x)**2+(e.y-ply.y)**2)<(e.s/2+ply.s)){{ li--; ply.inv=60; if(li<=0) go=true; }}
         }});
 
         itms.forEach((it,i)=>{{ if(Math.sqrt((it.x-ply.x)**2+(it.y-ply.y)**2)<25){{ ply.pw=it.t; ply.pT=ply.bDur; itms.splice(i,1); }} }});
@@ -215,11 +233,8 @@ game_html = f"""
             if(ply.sh) {{ ctx.strokeStyle="#00e5ff"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(ply.x,ply.y,ply.s+8,0,7); ctx.stroke(); }}
         }}
         update(); 
-        if(!go) {{
-            if(store.style.display !== 'block') requestAnimationFrame(draw);
-        }} else {{ 
-            ctx.fillStyle="#fff"; ctx.font="40px Arial"; ctx.fillText("GAME OVER",180,200); 
-        }}
+        if(!go) {{ if(store.style.display !== 'block') requestAnimationFrame(draw); }}
+        else {{ ctx.fillStyle="#fff"; ctx.font="40px Arial"; ctx.fillText("GAME OVER",180,200); }}
     }}
     initMap(); setInterval(()=>{{ if(itms.length<2) {{ let rx=Math.random()*540+30, ry=Math.random()*340+30; if(!isCol(rx,ry,15,wls)) itms.push({{x:rx,y:ry,t:Math.random()<0.5?'speed':'triple'}}); }} }}, 7000);
     draw();

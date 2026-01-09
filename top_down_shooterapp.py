@@ -83,4 +83,42 @@ gh = """
         
         buls.forEach((b,i)=>{
             b.x+=b.vx; b.y+=b.vy; if(col(b.x,b.y,2,wls)||b.x<0||b.x>600||b.y<0||b.y>400){ buls.splice(i,1); return; }
-            if(boss && b.x>boss.x && b.x<boss.x+boss.s && b.y>boss.
+            if(boss && b.x>boss.x && b.x<boss.x+boss.s && b.y>boss.y && b.y<boss.y+boss.s){ 
+                if(!boss.sh){ boss.h -= 5; if(boss.h<=0){ sc+=200; boss=null; for(let j=0; j<4; j++) spE(); } }
+                buls.splice(i,1);
+            }
+            enms.forEach((e,ei)=>{ if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){ e.h -= 5; buls.splice(i,1); if(e.h<=0){ sc+=e.sc; enms.splice(ei,1); if(sc>0 && sc%100===0) spB(); else spE(); }}});
+        });
+
+        ebuls.forEach((eb,i)=>{ eb.x+=eb.vx; eb.y+=eb.vy; if(eb.x<0||eb.x>600||eb.y<0||eb.y>400) ebuls.splice(i,1); if(ply.inv<=0 && Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s){ li--; ply.inv=60; ebuls.splice(i,1); if(li<=0) go=true; }});
+
+        if(boss){
+            move(boss); boss.fT++; boss.sT++;
+            if(boss.fT > 120) { for(let a=0; a<6.2; a+=0.5) ebuls.push({x:boss.x+boss.s/2,y:boss.y+boss.s/2,vx:Math.cos(a)*5,vy:Math.sin(a)*5}); boss.fT = 0; }
+            if(boss.sT > 300) { boss.sh = true; if(boss.h < boss.mH) boss.h += 0.05; if(boss.sT > 450) { boss.sh = false; boss.sT = 0; } }
+            if(boss.fT % 30 === 0) { let a=Math.atan2(ply.y-boss.y, ply.x-boss.x); ebuls.push({x:boss.x+boss.s/2,y:boss.y+boss.s/2,vx:Math.cos(a)*6,vy:Math.sin(a)*6}); }
+            if(ply.inv<=0 && ply.x>boss.x && ply.x<boss.x+boss.s && ply.y>boss.y && ply.y<boss.y+boss.s){ li--; ply.inv=60; if(li<=0) go=true; }
+        }
+        enms.forEach(e=>{ move(e); if(ply.inv<=0 && Math.sqrt((e.x+e.s/2-ply.x)**2+(e.y+e.s/2-ply.y)**2)<(e.s/2+ply.s)){ li--; ply.inv=60; if(li<=0) go=true; }});
+        stB.innerText=`Skor: ${sc} | Nyawa: ${"❤️".repeat(li)} ${ply.pw?'| '+ply.pw.toUpperCase():''}`;
+        if(go) { ctx.fillStyle="white"; ctx.font="40px Arial"; ctx.fillText("GAME OVER", 180, 200); }
+    }
+
+    function drw(){
+        ctx.clearRect(0,0,600,400); ctx.fillStyle="#333"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
+        itms.forEach(it=>{ ctx.fillStyle=it.t==='speed'?"#f1c40f":"#3498db"; ctx.beginPath(); ctx.arc(it.x,it.y,9,0,7); ctx.fill(); });
+        enms.forEach(e=>{ ctx.fillStyle=e.c; ctx.fillRect(e.x,e.y,e.s,e.s); });
+        if(boss){ 
+            if(boss.sh) { ctx.strokeStyle="#2ecc71"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(boss.x+boss.s/2, boss.y+boss.s/2, boss.s/1.2, 0, 7); ctx.stroke(); }
+            ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s); 
+            ctx.fillStyle="#2ecc71"; ctx.fillRect(boss.x,boss.y-12,(boss.h/boss.mH)*boss.s,6); 
+        }
+        ctx.fillStyle="#f39c12"; buls.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill(); });
+        ctx.fillStyle="red"; ebuls.forEach(eb=>{ ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,7); ctx.fill(); });
+        if(ply.inv%10<5){ ctx.fillStyle="#00a2e8"; ctx.beginPath(); ctx.arc(ply.x,ply.y,ply.s,0,7); ctx.fill(); }
+        upd(); requestAnimationFrame(drw);
+    }
+    init(); drw();
+</script>
+"""
+cp.html(gh, height=580)

@@ -1,11 +1,11 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Chaos", layout="centered")
-st.title("💀 Chaos Boss Battle")
-st.write("Skor 100 = BOSS MUNCUL! | Spasi = LASER ULTIMATE")
+st.set_page_config(page_title="Island.io: Turbo", layout="centered")
+st.title("🔥 Island.io: Turbo Chaos")
+st.write("Musuh muncul lebih cepat & Laser lebih mematikan!")
 
-# BAGIAN 1: HTML & CSS
+# BAGIAN 1: HTML, CSS & ULTIMATE BAR
 part1 = """
 <div style="text-align:center; background:#111; padding:10px; border-radius:10px;">
     <h2 id="s" style="color:white; margin:0;">Skor: 0 | Nyawa: ❤️❤️❤️</h2>
@@ -16,7 +16,7 @@ part1 = """
 </div>
 """
 
-# BAGIAN 2: JAVASCRIPT LOGIC
+# BAGIAN 2: JAVASCRIPT LOGIC (FIXED SPAWN & LASER DAMAGE)
 part2 = """
 <script>
     const cv=document.getElementById("c"), ctx=cv.getContext("2d"), stB=document.getElementById("s"), uF=document.getElementById("uF");
@@ -30,6 +30,7 @@ part2 = """
     };
 
     function col(x,y,s,ws){ for(let w of ws){ if(x>w.x-s && x<w.x+w.w+s && y>w.y-s && y<w.y+w.h+s) return true; } return false; }
+    
     function spE(){
         let ok=false; while(!ok){
             let rx=Math.random()*560+20, ry=Math.random()*360+20;
@@ -39,6 +40,7 @@ part2 = """
             }
         }
     }
+
     function spB(){ boss={x:300,y:50,s:60,h:250,mH:250,sp:0.8,m:'sk',tT:0,d:{x:0,y:0},fT:0,sT:0,sh:false}; }
 
     function init(){
@@ -46,8 +48,7 @@ part2 = """
             let w=Math.random()*100+50, h=Math.random()*100+50, x=Math.random()*450+50, y=Math.random()*250+50;
             if(!(x<380&&x+w>220&&y<280&&y+h>120)) wls.push({x,y,w,h});
         }
-        for(let i=0; i<4; i++) spE();
-        setInterval(() => { if(enms.length < 5) spE(); }, 3000);
+        for(let i=0; i<6; i++) spE();
     }
 
     function move(e){
@@ -63,32 +64,43 @@ part2 = """
 
     function upd(){
         if(go) return; if(sk>0) sk--;
+        
+        // Fast Respawn Logic: Selalu jaga musuh minimal 5
+        if(enms.length < 5) spE();
+
         let cs=ply.pw==='speed'?7.8:4.3, nx=ply.x, ny=ply.y;
         if(ks["KeyW"]) ny-=cs; if(ks["KeyS"]) ny+=cs; if(ks["KeyA"]) nx-=cs; if(ks["KeyD"]) nx+=cs;
         if(!col(nx,ny,ply.s,wls)){ ply.x=Math.max(ply.s,Math.min(588,nx)); ply.y=Math.max(ply.s,Math.min(388,ny)); }
         if(ply.inv>0) ply.inv--;
-        if(!ply.ultA && ply.ult < 100) ply.ult += 0.25;
+
+        // Ultimate Laser (Buffed Damage)
+        if(!ply.ultA && ply.ult < 100) ply.ult += 0.3; // Lebih cepat terisi
         if(ks["Space"] && ply.ult >= 100) { ply.ultA = true; ply.ultT = 200; ply.ult = 0; }
         if(ply.ultA) { 
             ply.ultT--; if(ply.ultT <= 0) ply.ultA = false; 
             let target = boss || enms[0];
             if(target) {
-                if(!boss || !boss.sh) target.h -= 0.4;
-                ctx.strokeStyle = "#9b59b6"; ctx.lineWidth = 4; ctx.beginPath();
+                // Damage laser naik jadi 0.8 per frame (jauh lebih kuat)
+                if(!boss || !boss.sh) target.h -= 0.8; 
+                ctx.strokeStyle = "#d35400"; ctx.lineWidth = 6; ctx.beginPath(); // Efek visual laser lebih tebal
                 ctx.moveTo(ply.x, ply.y); ctx.lineTo(target.x+target.s/2, target.y+target.s/2); ctx.stroke();
+                ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 2; ctx.stroke();
             }
         }
         uF.style.width = ply.ult + "%";
+
         buls.forEach((b,i)=>{
             b.x+=b.vx; b.y+=b.vy; if(col(b.x,b.y,2,wls)||b.x<0||b.x>600||b.y<0||b.y>400){ buls.splice(i,1); return; }
             if(boss && b.x>boss.x && b.x<boss.x+boss.s && b.y>boss.y && b.y<boss.y+boss.s){ if(!boss.sh){ boss.h-=5; if(boss.h<=0){ sc+=500; boss=null; } } buls.splice(i,1); }
-            enms.forEach((e,ei)=>{ if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){ e.h-=5; buls.splice(i,1); if(e.h<=0){ sc+=e.sc; enms.splice(ei,1); if(sc%100===0 && !boss) spB(); }}});
+            enms.forEach((e,ei)=>{ if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){ e.h-=5; buls.splice(i,1); if(e.h<=0){ sc+=e.sc; enms.splice(ei,1); if(sc%100===0 && sc>0 && !boss) spB(); }}});
         });
+
         ebuls.forEach((eb,i)=>{ eb.x+=eb.vx; eb.y+=eb.vy; if(eb.x<0||eb.x>600||eb.y<0||eb.y>400) ebuls.splice(i,1); if(ply.inv<=0 && Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s){ li--; ply.inv=60; sk=10; ebuls.splice(i,1); if(li<=0) go=true; }});
+
         if(boss){
             move(boss); boss.fT++; boss.sT++;
             if(boss.fT > 100) { sk=15; for(let a=0; a<6.2; a+=0.4) ebuls.push({x:boss.x+boss.s/2,y:boss.y+boss.s/2,vx:Math.cos(a)*5,vy:Math.sin(a)*5}); boss.fT = 0; }
-            if(boss.sT > 350) { boss.sh = true; if(boss.h < boss.mH) boss.h += 0.15; if(boss.sT > 500) { boss.sh = false; boss.sT = 0; } }
+            if(boss.sT > 300) { boss.sh = true; if(boss.h < boss.mH) boss.h += 0.2; if(boss.sT > 450) { boss.sh = false; boss.sT = 0; } }
             if(boss.fT % 25 === 0) { let a=Math.atan2(ply.y-boss.y, ply.x-boss.x); ebuls.push({x:boss.x+boss.s/2,y:boss.y+boss.s/2,vx:Math.cos(a)*6,vy:Math.sin(a)*6}); }
         }
         enms.forEach(e=>{ move(e); if(ply.inv<=0 && Math.sqrt((e.x+e.s/2-ply.x)**2+(e.y+e.s/2-ply.y)**2)<(e.s/2+ply.s)){ li--; ply.inv=60; sk=10; if(li<=0) go=true; }});
@@ -103,7 +115,7 @@ part2 = """
         if(boss){ 
             if(boss.sh) { ctx.strokeStyle="#2ecc71"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(boss.x+boss.s/2, boss.y+boss.s/2, boss.s/1.2, 0, 7); ctx.stroke(); }
             ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s); 
-            ctx.fillStyle="#2ecc71"; ctx.fillRect(boss.x,boss.y-12,(boss.h/boss.mH)*boss.s,6); 
+            ctx.fillStyle="#2ecc71"; ctx.fillRect(boss.x,boss.y-12,(boss.h/boss.mH)*boss.s,8); // Bar darah boss lebih tebal
         }
         ctx.fillStyle="#f39c12"; buls.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill(); });
         ctx.fillStyle="red"; ebuls.forEach(eb=>{ ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,7); ctx.fill(); });

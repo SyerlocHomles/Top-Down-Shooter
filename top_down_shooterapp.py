@@ -3,9 +3,10 @@ import streamlit.components.v1 as cp
 
 st.set_page_config(page_title="Island.io: Chaos", layout="centered")
 st.title("💀 Chaos Boss Battle")
-st.write("Skor 100 = BOSS MUNCUL! Tekan SPASI untuk LASER!")
+st.write("Skor 100 = BOSS MUNCUL! | Spasi = LASER ULTIMATE")
 
-gh = """
+# BAGIAN 1: HTML & CSS
+part1 = """
 <div style="text-align:center; background:#111; padding:10px; border-radius:10px;">
     <h2 id="s" style="color:white; margin:0;">Skor: 0 | Nyawa: ❤️❤️❤️</h2>
     <div style="width:200px; height:10px; background:#444; margin:5px auto; border-radius:5px; overflow:hidden;">
@@ -13,6 +14,10 @@ gh = """
     </div>
     <canvas id="c" width="600" height="400" style="border:3px solid #444; background:#0a0a0a; cursor:crosshair;"></canvas>
 </div>
+"""
+
+# BAGIAN 2: JAVASCRIPT LOGIC
+part2 = """
 <script>
     const cv=document.getElementById("c"), ctx=cv.getContext("2d"), stB=document.getElementById("s"), uF=document.getElementById("uF");
     let sc=0, li=3, go=false, ks={}, ply={x:300,y:200,s:12,inv:0,pw:null,pT:0,ult:0,ultA:false,ultT:0}, buls=[], ebuls=[], enms=[], wls=[], boss=null, sk=0;
@@ -108,4 +113,7 @@ gh = """
     init(); drw();
 </script>
 """
-cp.html(gh, height=600)
+
+# GABUNGKAN DAN JALANKAN
+full_gh = part1 + part2
+cp.html(full_gh, height=600)

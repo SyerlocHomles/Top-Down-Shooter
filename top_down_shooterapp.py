@@ -1,30 +1,35 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Island Shooter 2D", layout="centered")
+st.set_page_config(page_title="IO Style Shooter", layout="centered")
 
-st.title("🛡️ Island Defender 2D")
-st.write("Gunakan **W, A, S, D** untuk bergerak dan **SPASI** untuk menembak!")
+st.title("🏹 Island.io Shooter")
+st.write("Misi: Tembak kotak merah! Gunakan **WASD** dan **SPASI**.")
 
-# Koding Game dalam HTML & JavaScript (Biar Smooth tanpa Loading)
 game_html = """
-<canvas id="gameCanvas" width="600" height="400" style="border:5px solid #000; background: #fff;"></canvas>
+<div style="text-align: center;">
+    <h2 id="scoreBoard">Skor: 0</h2>
+    <canvas id="gameCanvas" width="600" height="400" style="border:5px solid #2c3e50; background: #ecf0f1; border-radius: 10px;"></canvas>
+</div>
 
 <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+    const scoreBoard = document.getElementById("scoreBoard");
 
-    // Properti Game
-    let player = { x: 100, y: 300, size: 25, color: "#00a2e8" };
+    let score = 0;
+    let player = { x: 300, y: 200, size: 15, color: "#00a2e8", speed: 4 };
     let bullets = [];
-    let enemies = [{ x: 500, y: 50, size: 30, color: "#ed1c24" }];
+    let enemies = [
+        { x: 50, y: 50, size: 25 },
+        { x: 550, y: 350, size: 25 }
+    ];
     let walls = [
-        { x: 0, y: 0, w: 200, h: 100 }, // Bangunan kiri atas
-        { x: 250, y: 150, w: 100, h: 100 } // Bangunan tengah
+        { x: 100, y: 100, w: 150, h: 20 },
+        { x: 350, y: 250, w: 20, h: 100 }
     ];
     let keys = {};
 
-    // Kontrol Keyboard
     window.addEventListener("keydown", (e) => keys[e.code] = true);
     window.addEventListener("keyup", (e) => keys[e.code] = false);
 
@@ -32,68 +37,86 @@ game_html = """
         let nextX = player.x;
         let nextY = player.y;
 
-        if (keys["KeyW"]) nextY -= 4;
-        if (keys["KeyS"]) nextY += 4;
-        if (keys["KeyA"]) nextX -= 4;
-        if (keys["KeyD"]) nextX += 4;
+        if (keys["KeyW"]) nextY -= player.speed;
+        if (keys["KeyS"]) nextY += player.speed;
+        if (keys["KeyA"]) nextX -= player.speed;
+        if (keys["KeyD"]) nextX += player.speed;
+        
+        // Tembak Peluru
         if (keys["Space"]) {
-            if (bullets.length < 5) { // Batasi jumlah peluru
-                bullets.push({ x: player.x + 10, y: player.y, speed: 7 });
-                keys["Space"] = false; // Mencegah spam
-            }
+            bullets.push({ x: player.x, y: player.y, speed: 8 });
+            keys["Space"] = false; 
         }
 
-        // Cek Tabrakan Bangunan
+        // Cek Tabrakan Tembok
         let hitWall = false;
         walls.forEach(w => {
-            if (nextX < w.x + w.w && nextX + player.size > w.x &&
-                nextY < w.y + w.h && nextY + player.size > w.y) {
+            if (nextX > w.x - 15 && nextX < w.x + w.w + 15 &&
+                nextY > w.y - 15 && nextY < w.y + w.h + 15) {
                 hitWall = true;
             }
         });
 
         if (!hitWall) {
-            player.x = nextX;
-            player.y = nextY;
+            player.x = Math.max(15, Math.min(585, nextX));
+            player.y = Math.max(15, Math.min(385, nextY));
         }
 
-        // Update Peluru
-        bullets.forEach((b, index) => {
+        // Update Peluru & Cek Hit Musuh
+        bullets.forEach((b, bi) => {
             b.x += b.speed;
-            if (b.x > canvas.width) bullets.splice(index, 1);
+            enemies.forEach((e, ei) => {
+                if (b.x > e.x && b.x < e.x + e.size && b.y > e.y && b.y < e.y + e.size) {
+                    bullets.splice(bi, 1);
+                    enemies.splice(ei, 1);
+                    score += 10;
+                    scoreBoard.innerText = "Skor: " + score;
+                    // Munculkan musuh baru (Spawn)
+                    enemies.push({ x: Math.random()*500, y: Math.random()*300, size: 25 });
+                }
+            });
+            if (b.x > 600) bullets.splice(bi, 1);
+        });
+
+        // Musuh Mengejar Player
+        enemies.forEach(e => {
+            if (e.x < player.x) e.x += 0.5;
+            else e.x -= 0.5;
+            if (e.y < player.y) e.y += 0.5;
+            else e.y -= 0.5;
         });
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Gambar Bangunan
-        ctx.fillStyle = "#000";
+        
+        // Gambar Tembok
+        ctx.fillStyle = "#34495e";
         walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
 
         // Gambar Musuh
-        ctx.fillStyle = "#ed1c24";
+        ctx.fillStyle = "#e74c3c";
         enemies.forEach(e => ctx.fillRect(e.x, e.y, e.size, e.size));
 
         // Gambar Peluru
-        ctx.fillStyle = "orange";
-        bullets.forEach(b => ctx.beginPath() || ctx.arc(b.x, b.y, 5, 0, Math.PI*2) || ctx.fill());
+        ctx.fillStyle = "#f1c40f";
+        bullets.forEach(b => {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, 5, 0, Math.PI*2);
+            ctx.fill();
+        });
 
-        // Gambar Player (Biru)
+        // Gambar Player
         ctx.fillStyle = player.color;
         ctx.beginPath();
-        ctx.arc(player.x + 12, player.y + 12, 12, 0, Math.PI*2);
+        ctx.arc(player.x, player.y, player.size, 0, Math.PI*2);
         ctx.fill();
 
         update();
         requestAnimationFrame(draw);
     }
-
     draw();
 </script>
 """
 
-# Masukkan kode HTML tadi ke Streamlit
-components.html(game_html, height=450)
-
-st.success("TIPS: Klik pada area kotak putih sebelum mulai menggerakkan karakter!")
+components.html(game_html, height=500)

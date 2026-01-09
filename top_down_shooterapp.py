@@ -65,4 +65,25 @@ game_html = """
         enemies.forEach(e => {
             let nex = e.x, ney = e.y;
             if(e.x < ply.x) nex += 1.3; else nex -= 1.3;
-            if(e.
+            if(e.y < ply.y) ney += 1.3; else ney -= 1.3;
+            if(!col(nex+11, ney+11, 11, walls)){ e.x = nex; e.y = ney; }
+            if(ply.invuln <= 0 && Math.sqrt((e.x+11-ply.x)**2 + (e.y+11-ply.y)**2) < (11+ply.s)){
+                lives--; ply.invuln = 60; // Kebal selama 1 detik
+                if(lives <= 0){ isGO = true; gOS.style.display="block"; }
+            }
+        });
+        stats.innerText = `Skor: ${score} | Nyawa: ${"❤️".repeat(lives)}`;
+    }
+
+    function draw() {
+        ctx.clearRect(0,0,600,400);
+        ctx.fillStyle="#34495e"; walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
+        ctx.fillStyle="#e74c3c"; enemies.forEach(e => ctx.fillRect(e.x, e.y, e.s, e.s));
+        ctx.fillStyle="#f39c12"; bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
+        if(ply.invuln % 10 < 5){ ctx.fillStyle=ply.c; ctx.beginPath(); ctx.arc(ply.x, ply.y, ply.s, 0, 7); ctx.fill(); }
+        update(); requestAnimationFrame(draw);
+    }
+    init(); draw();
+</script>
+"""
+components.html(game_html, height=580)

@@ -1,11 +1,11 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Turbo", layout="centered")
-st.title("🔥 Island.io: Turbo Chaos")
-st.write("Musuh muncul lebih cepat & Laser lebih mematikan!")
+st.set_page_config(page_title="Island.io: Tactical", layout="centered")
+st.title("🛡️ Island.io: Tactical Cover")
+st.write("Sekarang kamu bisa sembunyi di balik tembok! Gunakan strategi!")
 
-# BAGIAN 1: HTML, CSS & ULTIMATE BAR
+# BAGIAN 1: HTML & CSS
 part1 = """
 <div style="text-align:center; background:#111; padding:10px; border-radius:10px;">
     <h2 id="s" style="color:white; margin:0;">Skor: 0 | Nyawa: ❤️❤️❤️</h2>
@@ -16,7 +16,7 @@ part1 = """
 </div>
 """
 
-# BAGIAN 2: JAVASCRIPT LOGIC (FIXED SPAWN & LASER DAMAGE)
+# BAGIAN 2: LOGIC (PELURU TIDAK TEMBUS TEMBOK + EXPLOSION)
 part2 = """
 <script>
     const cv=document.getElementById("c"), ctx=cv.getContext("2d"), stB=document.getElementById("s"), uF=document.getElementById("uF");
@@ -64,8 +64,6 @@ part2 = """
 
     function upd(){
         if(go) return; if(sk>0) sk--;
-        
-        // Fast Respawn Logic: Selalu jaga musuh minimal 5
         if(enms.length < 5) spE();
 
         let cs=ply.pw==='speed'?7.8:4.3, nx=ply.x, ny=ply.y;
@@ -73,29 +71,39 @@ part2 = """
         if(!col(nx,ny,ply.s,wls)){ ply.x=Math.max(ply.s,Math.min(588,nx)); ply.y=Math.max(ply.s,Math.min(388,ny)); }
         if(ply.inv>0) ply.inv--;
 
-        // Ultimate Laser (Buffed Damage)
-        if(!ply.ultA && ply.ult < 100) ply.ult += 0.3; // Lebih cepat terisi
+        // Ultimate Laser
+        if(!ply.ultA && ply.ult < 100) ply.ult += 0.35;
         if(ks["Space"] && ply.ult >= 100) { ply.ultA = true; ply.ultT = 200; ply.ult = 0; }
         if(ply.ultA) { 
             ply.ultT--; if(ply.ultT <= 0) ply.ultA = false; 
             let target = boss || enms[0];
             if(target) {
-                // Damage laser naik jadi 0.8 per frame (jauh lebih kuat)
-                if(!boss || !boss.sh) target.h -= 0.8; 
-                ctx.strokeStyle = "#d35400"; ctx.lineWidth = 6; ctx.beginPath(); // Efek visual laser lebih tebal
+                if(!boss || !boss.sh) target.h -= 1.0; 
+                ctx.strokeStyle = "#e67e22"; ctx.lineWidth = 6; ctx.beginPath();
                 ctx.moveTo(ply.x, ply.y); ctx.lineTo(target.x+target.s/2, target.y+target.s/2); ctx.stroke();
-                ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 2; ctx.stroke();
             }
         }
         uF.style.width = ply.ult + "%";
 
+        // Peluru Pemain & Cek Tembok
         buls.forEach((b,i)=>{
-            b.x+=b.vx; b.y+=b.vy; if(col(b.x,b.y,2,wls)||b.x<0||b.x>600||b.y<0||b.y>400){ buls.splice(i,1); return; }
+            b.x+=b.vx; b.y+=b.vy; 
+            if(col(b.x,b.y,4,wls) || b.x<0 || b.x>600 || b.y<0 || b.y>400){ buls.splice(i,1); return; }
             if(boss && b.x>boss.x && b.x<boss.x+boss.s && b.y>boss.y && b.y<boss.y+boss.s){ if(!boss.sh){ boss.h-=5; if(boss.h<=0){ sc+=500; boss=null; } } buls.splice(i,1); }
-            enms.forEach((e,ei)=>{ if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){ e.h-=5; buls.splice(i,1); if(e.h<=0){ sc+=e.sc; enms.splice(ei,1); if(sc%100===0 && sc>0 && !boss) spB(); }}});
+            enms.forEach((e,ei)=>{ if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){ e.h-=5; buls.splice(i,1); if(e.h<=0){ 
+                sc+=e.sc; 
+                // Explosion effect: damage nearby enemies
+                enms.forEach(near => { if(near !== e && Math.sqrt((near.x-e.x)**2+(near.y-e.y)**2) < 80) near.h -= 3; });
+                enms.splice(ei,1); if(sc%100===0 && sc>0 && !boss) spB(); 
+            }}});
         });
 
-        ebuls.forEach((eb,i)=>{ eb.x+=eb.vx; eb.y+=eb.vy; if(eb.x<0||eb.x>600||eb.y<0||eb.y>400) ebuls.splice(i,1); if(ply.inv<=0 && Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s){ li--; ply.inv=60; sk=10; ebuls.splice(i,1); if(li<=0) go=true; }});
+        // Peluru Musuh & Cek Tembok (FIX: Sekarang hancur kena tembok)
+        ebuls.forEach((eb,i)=>{ 
+            eb.x+=eb.vx; eb.y+=eb.vy; 
+            if(col(eb.x,eb.y,5,wls) || eb.x<0 || eb.x>600 || eb.y<0 || eb.y>400){ ebuls.splice(i,1); return; }
+            if(ply.inv<=0 && Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s){ li--; ply.inv=60; sk=10; ebuls.splice(i,1); if(li<=0) go=true; }
+        });
 
         if(boss){
             move(boss); boss.fT++; boss.sT++;
@@ -110,15 +118,15 @@ part2 = """
 
     function drw(){
         ctx.save(); if(sk > 0) ctx.translate(Math.random()*sk-sk/2, Math.random()*sk-sk/2);
-        ctx.clearRect(0,0,600,400); ctx.fillStyle="#333"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
+        ctx.clearRect(0,0,600,400); ctx.fillStyle="#444"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
         enms.forEach(e=>{ ctx.fillStyle=e.c; ctx.fillRect(e.x,e.y,e.s,e.s); });
         if(boss){ 
             if(boss.sh) { ctx.strokeStyle="#2ecc71"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(boss.x+boss.s/2, boss.y+boss.s/2, boss.s/1.2, 0, 7); ctx.stroke(); }
             ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s); 
-            ctx.fillStyle="#2ecc71"; ctx.fillRect(boss.x,boss.y-12,(boss.h/boss.mH)*boss.s,8); // Bar darah boss lebih tebal
+            ctx.fillStyle="#2ecc71"; ctx.fillRect(boss.x,boss.y-12,(boss.h/boss.mH)*boss.s,8);
         }
-        ctx.fillStyle="#f39c12"; buls.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill(); });
-        ctx.fillStyle="red"; ebuls.forEach(eb=>{ ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,7); ctx.fill(); });
+        ctx.fillStyle="#f1c40f"; buls.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill(); });
+        ctx.fillStyle="#e74c3c"; ebuls.forEach(eb=>{ ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,7); ctx.fill(); });
         if(ply.inv%10<5){ ctx.fillStyle="#00a2e8"; ctx.beginPath(); ctx.arc(ply.x,ply.y,ply.s,0,7); ctx.fill(); }
         ctx.restore(); upd(); requestAnimationFrame(drw);
     }

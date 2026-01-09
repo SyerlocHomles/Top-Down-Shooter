@@ -1,8 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Tactical Boss", layout="centered")
-st.title("⚔️ Island.io: Tactical Boss Fight")
+st.set_page_config(page_title="Island.io: Tactical Battle", layout="centered")
+st.title("🛡️ Island.io: Tactical Battle v2.0")
 
 if "char" not in st.session_state:
     st.session_state.char = None
@@ -40,10 +40,10 @@ game_html = f"""
     <div id="buff-ui" style="color:#f1c40f; font-size:12px; font-weight:bold; min-height:15px; margin-bottom:5px;"></div>
 
     <div id="upgrade-menu" style="display:none; position:absolute; width:100%; height:100%; top:0; left:0; background:rgba(0,0,0,0.9); z-index:1000; border-radius:11px;">
-        <h2 style="color:white; margin-top:120px;">⬆️ LEVEL UP!</h2>
-        <p style="color:#2ecc71;">Boss Kalah! Pilih Bonus:</p>
-        <button onclick="window.applyUpgrade('hp')" style="padding:10px 20px; background:#2ecc71; color:white; border:none; margin:5px; border-radius:5px; cursor:pointer;">+1 HP</button>
-        <button onclick="window.applyUpgrade('dmg')" style="padding:10px 20px; background:#e74c3c; color:white; border:none; margin:5px; border-radius:5px; cursor:pointer;">+1 DMG</button>
+        <h2 style="color:white; margin-top:100px;">⬆️ BOSS DEFEATED!</h2>
+        <p style="color:#2ecc71;">Pilih Bonus Permanen:</p>
+        <button onclick="window.applyUpgrade('hp')" style="padding:10px 20px; background:#2ecc71; color:white; border:none; margin:5px; border-radius:5px; cursor:pointer; font-weight:bold;">+1 NYAWA</button>
+        <button onclick="window.applyUpgrade('dmg')" style="padding:10px 20px; background:#e74c3c; color:white; border:none; margin:5px; border-radius:5px; cursor:pointer; font-weight:bold;">+1 DAMAGE</button>
     </div>
 
     <canvas id="g" width="600" height="400" style="background:#050505; border: 2px solid #333; border-radius:5px; cursor: crosshair;"></canvas>
@@ -62,7 +62,7 @@ game_html = f"""
     let player = {{
         x: 300, y: 200, r: 12, speed: {st.session_state.char['spd']},
         type: '{st.session_state.char['type']}', color: '{st.session_state.char['col']}',
-        sT: 0, sM: 500, shield: false,
+        sT: 0, sM: 400, shield: false,
         buffs: {{ speed: 0, triple: 0 }},
         dmg: 5, inv: 0
     }};
@@ -70,6 +70,7 @@ game_html = f"""
     window.applyUpgrade = (type) => {{
         if(type==='hp') health++; else player.dmg++;
         level++;
+        score = 0; // Reset skor untuk level berikutnya
         initWalls();
         uMenu.style.display = 'none';
         requestAnimationFrame(loop);
@@ -77,9 +78,10 @@ game_html = f"""
 
     function initWalls() {{
         walls = [];
-        let count = Math.max(10 - level, 4); // Tembok banyak di awal, berkurang tiap level
+        // Tembok banyak di awal (12), berkurang tiap level
+        let count = Math.max(12 - level, 5); 
         for(let i=0; i<count; i++) {{
-            let w = 40+Math.random()*50, h = 40+Math.random()*50;
+            let w = 35+Math.random()*40, h = 35+Math.random()*40;
             let x = 50+Math.random()*450, y = 50+Math.random()*250;
             if(Math.hypot(x+w/2-300, y+h/2-200) > 100) walls.push({{x,y,w,h}});
         }}
@@ -93,7 +95,7 @@ game_html = f"""
     }}
 
     function spawnExplosion(x, y, color) {{
-        for(let i=0; i<10; i++) particles.push({{x,y,vx:(Math.random()-0.5)*6, vy:(Math.random()-0.5)*6, life:25, c:color}});
+        for(let i=0; i<12; i++) particles.push({{x,y,vx:(Math.random()-0.5)*8, vy:(Math.random()-0.5)*8, life:20, c:color}});
     }}
 
     function triggerRespawn() {{
@@ -113,13 +115,14 @@ game_html = f"""
         if(player.sT < player.sM || gameOver) return;
         player.sT = 0;
         if(player.type==='assault') {{
-            for(let i=0; i<10; i++) setTimeout(()=>fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), true, true), i*100);
+            // Rocket Rain dikendalikan kursor
+            for(let i=0; i<12; i++) setTimeout(()=>fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), true, true), i*100);
         }} else if(player.type==='tank') {{
-            player.shield=true; setTimeout(()=>player.shield=false, 5000);
+            player.shield=true; setTimeout(()=>player.shield=false, 6000);
         }} else if(player.type==='scout') {{
             let a = Math.atan2(my-player.y, mx-player.x);
-            let tx = player.x + Math.cos(a)*150, ty = player.y + Math.sin(a)*150;
-            if(!isInsideWall(tx, ty, player.r)) {{ player.x=tx; player.y=ty; }}
+            let tx = player.x + Math.cos(a)*180, ty = player.y + Math.sin(a)*180;
+            if(!isInsideWall(tx, ty, player.r)) {{ player.x=tx; player.y=ty; spawnExplosion(tx,ty,player.color); }}
         }}
     }}
 
@@ -127,7 +130,7 @@ game_html = f"""
         if(gameOver || uMenu.style.display === 'block') return;
         let a = Math.atan2(my-player.y, mx-player.x);
         fire(player.x, player.y, a, false, true);
-        if(player.buffs.triple > 0) {{ fire(player.x, player.y, a+0.2, false, true); fire(player.x, player.y, a-0.2, false, true); }}
+        if(player.buffs.triple > 0) {{ fire(player.x, player.y, a+0.25, false, true); fire(player.x, player.y, a-0.25, false, true); }}
     }};
 
     function fire(x, y, a, isRocket, isPlayer) {{
@@ -137,7 +140,6 @@ game_html = f"""
     function update() {{
         if(gameOver || uMenu.style.display === 'block') return;
         
-        // Player Move
         let s = player.buffs.speed > 0 ? player.speed*1.7 : player.speed;
         let nx=player.x, ny=player.y;
         if(keys['KeyW']) ny-=s; if(keys['KeyS']) ny+=s;
@@ -149,24 +151,33 @@ game_html = f"""
         if(player.buffs.speed > 0) player.buffs.speed--;
         if(player.buffs.triple > 0) player.buffs.triple--;
 
-        // Bullets
         bullets = bullets.filter(b => {{
             b.x += b.vx; b.y += b.vy;
             if(isInsideWall(b.x, b.y, b.r)) return false;
-            if(b.p) {{ // Player Bullet
+            if(b.p) {{
                 for(let e of enemies) {{
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.rk?player.dmg*4:player.dmg;
-                        if(e.hp<=0) {{ if(!boss) score += e.v; enemies.splice(enemies.indexOf(e), 1); }}
+                        if(e.hp<=0) {{ 
+                            if(!boss) {{
+                                if(e.color==='#9b59b6') score+=10;
+                                else if(e.color==='#e74c3c') score+=5;
+                                else score+=3;
+                            }}
+                            enemies.splice(enemies.indexOf(e), 1); 
+                        }}
                         return false;
                     }}
                 }}
                 if(boss && b.x > boss.x && b.x < boss.x+boss.w && b.y > boss.y && b.y < boss.y+boss.h) {{
-                    if(boss.sh) {{ boss.hp = Math.min(boss.mH, boss.hp + (level>=4?2:1)); }}
-                    else {{ boss.hp -= player.dmg; }}
+                    if(boss.sh) {{ 
+                        boss.hp = Math.min(boss.mH, boss.hp + (level>=5?2:1)); 
+                        fire(b.x, b.y, Math.PI + Math.atan2(b.vy, b.vx), false, false); // Reflect
+                    }}
+                    else boss.hp -= player.dmg;
                     return false;
                 }}
-            }} else {{ // Enemy Bullet
+            }} else {{
                 if(Math.hypot(player.x-b.x, player.y-b.y) < player.r+b.r) {{
                     if(player.inv<=0 && !player.shield) triggerRespawn();
                     return false;
@@ -175,12 +186,11 @@ game_html = f"""
             return b.x>0 && b.x<600 && b.y>0 && b.y<400;
         }});
 
-        // Enemies
         enemies.forEach(e => {{
             let a = Math.atan2(player.y-e.y, player.x-e.x);
             let vx=Math.cos(a)*e.sp, vy=Math.sin(a)*e.sp;
             if(!isInsideWall(e.x+vx, e.y+vy, e.s/2)) {{ e.x+=vx; e.y+=vy; }}
-            else {{ // Slide
+            else {{
                 if(!isInsideWall(e.x+vy, e.y-vx, e.s/2)) {{ e.x+=vy; e.y-=vx; }}
                 else if(!isInsideWall(e.x-vy, e.y+vx, e.s/2)) {{ e.x-=vy; e.y+=vx; }}
             }}
@@ -192,32 +202,30 @@ game_html = f"""
             if(Math.hypot(player.x-e.x, player.y-e.y) < player.r+e.s/2 && player.inv<=0 && !player.shield) triggerRespawn();
         }});
 
-        // Boss
-        if(score >= 1000 && !boss) {{
+        if(score >= 500 && !boss) {{
             boss = {{x:250, y:-100, w:90, h:90, hp:600*level, mH:600*level, fT:0, uT:0, sh:false}};
         }}
         if(boss) {{
             let a = Math.atan2(player.y-(boss.y+boss.h/2), player.x-(boss.x+boss.w/2));
-            let bvx=Math.cos(a)*1.2, bvy=Math.sin(a)*1.2;
+            let bvx=Math.cos(a)*1.1, bvy=Math.sin(a)*1.1;
             if(!isInsideWall(boss.x+bvx+boss.w/2, boss.y+bvy+boss.h/2, boss.w/2)) {{ boss.x+=bvx; boss.y+=bvy; }}
             
             boss.fT++;
-            if(boss.fT > (level>=5?180:120)) {{
-                let count = level>=4?3:level>=2?2:1;
-                for(let i=0; i<count; i++) fire(boss.x+boss.w/2, boss.y+boss.h/2, a+(i*0.2-0.1), false, false);
+            if(boss.fT > 120) {{
+                let shots = level>=4?3:level>=2?2:1;
+                for(let i=0; i<shots; i++) fire(boss.x+boss.w/2, boss.y+boss.h/2, a+(i*0.25-0.12), false, false);
                 boss.fT = 0;
             }}
             boss.sh = boss.hp < boss.mH*0.4;
-            if(boss.hp <= 0) {{ score=0; boss=null; uMenu.style.display='block'; }}
+            if(boss.hp <= 0) {{ boss=null; uMenu.style.display='block'; }}
         }}
 
-        // Spawning
-        if(enemies.length < 4) {{
+        if(enemies.length < 5) {{
             let ex = Math.random()*540+30, ey = Math.random()*340+30;
-            if(!isInsideWall(ex, ey, 20)) {{
+            if(!isInsideWall(ex, ey, 25)) {{
                 let r = Math.random();
-                let t = r<0.5 ? {{c:'#e74c3c', s:20, sp:1.5, h:5, v:5}} : r<0.8 ? {{c:'#2ecc71', s:30, sp:0.7, h:12, v:3}} : {{c:'#9b59b6', s:18, sp:2.4, h:3, v:10}};
-                enemies.push({{x:ex, y:ey, color:t.c, s:t.s, sp:t.sp, hp:t.h, v:t.v, fT:0}});
+                let t = r<0.4 ? {{c:'#e74c3c', s:20, sp:1.4, h:5}} : r<0.7 ? {{c:'#2ecc71', s:28, sp:0.7, h:12}} : {{c:'#9b59b6', s:18, sp:2.2, h:4}};
+                enemies.push({{x:ex, y:ey, color:t.c, s:t.s, sp:t.sp, hp:t.h, fT:0}});
             }}
         }}
 
@@ -232,7 +240,7 @@ game_html = f"""
 
         if(player.inv > 0) player.inv--;
         uScore.innerText = "Skor: " + score;
-        uHP.innerText = "❤️".repeat(health);
+        uHP.innerText = "❤️".repeat(Math.max(0,health));
         let bt = [];
         if(player.buffs.speed>0) bt.push("⚡ SPEED: " + Math.ceil(player.buffs.speed/60) + "s");
         if(player.buffs.triple>0) bt.push("🔫 TRIPLE: " + Math.ceil(player.buffs.triple/60) + "s");
@@ -241,14 +249,15 @@ game_html = f"""
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
-        walls.forEach(w => {{ ctx.fillStyle='#444'; ctx.fillRect(w.x, w.y, w.w, w.h); }});
+        walls.forEach(w => {{ ctx.fillStyle='#444'; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.strokeStyle='#555'; ctx.strokeRect(w.x,w.y,w.w,w.h); }});
         items.forEach(it => {{ ctx.fillStyle=it.t==='speed'?'#3498db':'#f1c40f'; ctx.beginPath(); ctx.arc(it.x,it.y,10,0,7); ctx.fill(); }});
         bullets.forEach(b => {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }});
         enemies.forEach(e => {{ ctx.fillStyle=e.color; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); }});
-        particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
+        particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/20; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
         if(boss) {{
             ctx.fillStyle=boss.sh?'#00e5ff':'#ff4d4d'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x, boss.y-12, (boss.hp/boss.mH)*boss.w, 8);
+            if(boss.sh) {{ ctx.strokeStyle='#FFF'; ctx.strokeRect(boss.x-5, boss.y-5, boss.w+10, boss.h+10); }}
         }}
         if(player.inv % 10 < 5) {{
             ctx.fillStyle=player.color; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,7); ctx.fill();
@@ -264,7 +273,7 @@ game_html = f"""
             let ix=50+Math.random()*500, iy=50+Math.random()*300;
             if(!isInsideWall(ix,iy,15)) items.push({{x:ix, y:iy, t:Math.random()>0.5?'speed':'triple'}});
         }}
-    }}, 5000);
+    }}, 4000);
     loop();
 }})();
 </script>

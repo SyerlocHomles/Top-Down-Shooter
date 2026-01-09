@@ -1,11 +1,14 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Class Select", layout="centered")
+st.set_page_config(page_title="Island.io: Pro", layout="centered")
 st.title("🛡️ Island.io: Character Class")
 
-# UI Pemilihan Karakter menggunakan Streamlit
+# Pilihan Karakter
 col1, col2, col3 = st.columns(3)
+if "char" not in st.session_state:
+    st.session_state.char = None
+
 with col1:
     if st.button("🔵 Assault (Balanced)"):
         st.session_state.char = {"type": "Assault", "hp": 3, "speed": 4.6, "color": "#00a2e8"}
@@ -16,18 +19,17 @@ with col3:
     if st.button("🟡 Scout (Super Fast)"):
         st.session_state.char = {"type": "Scout", "hp": 2, "speed": 6.5, "color": "#f1c40f"}
 
-if "char" not in st.session_state:
-    st.info("Pilih karakter di atas untuk memulai!")
+if not st.session_state.char:
+    st.info("Pilih karakter di atas untuk bertarung!")
     st.stop()
 
-st.write(f"Karakter Terpilih: **{st.session_state.char['type']}**")
-
-# Kirim data karakter ke dalam HTML/JS
 c = st.session_state.char
+st.success(f"Karakter: {c['type']} Siap! (Gunakan WASD & Klik Mouse)")
 
+# BAGIAN 1: HTML & CSS (Menggunakan f-string tanpa merusak JS)
 part1 = f"""
 <div style="text-align:center; background:#111; padding:10px; border-radius:10px;">
-    <h2 id="s" style="color:white; margin:0;">Skor: 0 | Nyawa: {"❤️" * c['hp']}</h2>
+    <h2 id="s" style="color:white; margin:0;">Skor: 0 | Nyawa: </h2>
     <div style="width:200px; height:10px; background:#444; margin:5px auto; border-radius:5px; overflow:hidden;">
         <div id="uF" style="width:0%; height:100%; background:#9b59b6;"></div>
     </div>
@@ -35,6 +37,7 @@ part1 = f"""
 </div>
 """
 
+# BAGIAN 2: JAVASCRIPT (Backticks diubah agar tidak bentrok dengan Python)
 part2 = f"""
 <script>
     const cv=document.getElementById("c"), ctx=cv.getContext("2d"), stB=document.getElementById("s"), uF=document.getElementById("uF");
@@ -65,7 +68,7 @@ part2 = f"""
         let ok=false; while(!ok){{
             let rx=Math.random()*560+20, ry=Math.random()*360+20;
             if(!col(rx,ry,15,wls) && Math.sqrt((rx-ply.x)**2+(ry-ply.y)**2)>150){{
-                let r=Math.random(), t=r<0.5?{{c:'#e74c3c',s:20,sp:1.6,h:5,sc:5}}:(r<0.8?{{c:'#2ecc71',s:14,sp:2.4,h:3,sc:10}}:{{c:'#9b59b6',s:35,sp:0.9,h:15,sc:20}});
+                let r=Math.random(), t=r<0.5?{{c:'#e74c3c',s:20,sp:1.6,h:5,sc:5}}:(r<0.8?{{c:'#2ecc71',s:14,sp:2.2,h:3,sc:10}}:{{c:'#9b59b6',s:35,sp:0.9,h:15,sc:20}});
                 enms.push({{x:rx,y:ry,...t,m:'sk',tT:0,d:{{x:0,y:0}}}}); ok=true;
             }}
         }}
@@ -82,20 +85,20 @@ part2 = f"""
         else if(!col(e.x, e.y+vy, e.s/2, wls)) e.y+=vy;
     }}
 
-    function upd(){{
+    function upd(){{{
         if(go) return; if(sk>0) sk--; if(enms.length < 5) spE();
-        let cs=ply.pw==='speed'?ply.spd*1.8:ply.spd;
+        let cs=ply.pw==='speed'?ply.spd*1.7:ply.spd;
         let nx=ply.x, ny=ply.y;
         if(ks["KeyW"]) ny-=cs; if(ks["KeyS"]) ny+=cs; if(ks["KeyA"]) nx-=cs; if(ks["KeyD"]) nx+=cs;
         if(!col(nx,ny,ply.s,wls)){{ ply.x=Math.max(ply.s,Math.min(588,nx)); ply.y=Math.max(ply.s,Math.min(388,ny)); }}
         if(ply.inv>0) ply.inv--; if(ply.pT>0) {{ ply.pT--; if(ply.pT<=0) ply.pw=null; }}
 
-        if(!ply.ultA && ply.ult < 100) ply.ult += 0.35;
+        if(!ply.ultA && ply.ult < 100) ply.ult += 0.4;
         if(ks["Space"] && ply.ult >= 100) {{ ply.ultA = true; ply.ultT = 150; ply.ult = 0; }}
         if(ply.ultA) {{ 
             ply.ultT--; if(ply.ultT <= 0) ply.ultA = false; 
             let target = boss || enms[0];
-            if(target) {{ target.h -= 1.5; ctx.strokeStyle = "rgba(155, 89, 182, 0.8)"; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(ply.x, ply.y); ctx.lineTo(target.x+target.s/2, target.y+target.s/2); ctx.stroke(); }}
+            if(target) {{ target.h -= 1.5; ctx.strokeStyle = "#9b59b6"; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(ply.x, ply.y); ctx.lineTo(target.x+target.s/2, target.y+target.s/2); ctx.stroke(); }}
         }}
         uF.style.width = ply.ult + "%";
 
@@ -121,11 +124,14 @@ part2 = f"""
             if(boss.fT % 20 === 0) {{ let a=Math.atan2(ply.y-boss.y, ply.x-boss.x); ebuls.push({{x:boss.x+boss.s/2,y:boss.y+boss.s/2,vx:Math.cos(a)*8,vy:Math.sin(a)*8}}); }}
         }}
         enms.forEach(e=>{{ move(e); if(ply.inv<=0 && Math.sqrt((e.x+e.s/2-ply.x)**2+(e.y+e.s/2-ply.y)**2)<(e.s/2+ply.s)){{ li--; ply.inv=60; sk=10; if(li<=0) go=true; }} }});
-        stB.innerText=`Skor: ${sc} | Nyawa: ${{"❤️".repeat(li)}}`;
+        
+        let hearts = ""; for(let i=0; i<li; i++) hearts += "❤️";
+        stB.innerHTML = "Skor: " + sc + " | Nyawa: " + hearts;
+        
         if(go) {{ ctx.fillStyle="white"; ctx.font="40px Arial"; ctx.fillText("GAME OVER", 180, 200); }}
-    }}
+    }}}
 
-    function drw(){{
+    function drw(){{{
         ctx.save(); if(sk > 0) ctx.translate(Math.random()*sk-sk/2, Math.random()*sk-sk/2);
         ctx.clearRect(0,0,600,400); 
         ctx.fillStyle="#444"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
@@ -140,10 +146,11 @@ part2 = f"""
         ctx.fillStyle="#ff4757"; ebuls.forEach(eb=>{{ ctx.beginPath(); ctx.arc(eb.x,eb.y,6,0,7); ctx.fill(); }});
         if(ply.inv%10<5){{ ctx.fillStyle=ply.col; ctx.beginPath(); ctx.arc(ply.x,ply.y,ply.s,0,7); ctx.fill(); }}
         ctx.restore(); upd(); requestAnimationFrame(drw);
-    }}
+    }}}
     init(); drw();
 </script>
 """
 
+# Gabungkan
 full_gh = part1 + part2
 cp.html(full_gh, height=600)

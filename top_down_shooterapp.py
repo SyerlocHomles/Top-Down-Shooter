@@ -1,9 +1,9 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Island.io: 3 Lives", layout="centered")
-st.title("🛡️ Island.io: Survivor")
-st.write("Kamu punya **3 Nyawa**! Gunakan WASD dan Klik Mouse untuk bertahan.")
+st.set_page_config(page_title="Island.io: Smart Enemies", layout="centered")
+st.title("🧠 Island.io: Smart Enemy AI")
+st.write("Musuh sekarang bisa mencari jalan memutar kalau terhalang dinding!")
 
 game_html = """
 <div style="text-align: center; position: relative;">
@@ -64,11 +64,27 @@ game_html = """
 
         enemies.forEach(e => {
             let nex = e.x, ney = e.y;
-            if(e.x < ply.x) nex += 1.3; else nex -= 1.3;
-            if(e.y < ply.y) ney += 1.3; else ney -= 1.3;
-            if(!col(nex+11, ney+11, 11, walls)){ e.x = nex; e.y = ney; }
+            let speed = 1.3;
+            let dx = ply.x - e.x, dy = ply.y - e.y;
+            
+            // Logika Gerak Sumbu X
+            let moveX = dx > 0 ? speed : -speed;
+            if (!col(e.x + moveX + 11, e.y + 11, 11, walls)) e.x += moveX;
+            else { // Jika mentok di X, coba geser di Y (mencari jalan memutar)
+                if (!col(e.x + 11, e.y + speed + 11, 11, walls)) e.y += speed;
+                else if (!col(e.x + 11, e.y - speed + 11, 11, walls)) e.y -= speed;
+            }
+
+            // Logika Gerak Sumbu Y
+            let moveY = dy > 0 ? speed : -speed;
+            if (!col(e.x + 11, e.y + moveY + 11, 11, walls)) e.y += moveY;
+            else { // Jika mentok di Y, coba geser di X
+                if (!col(e.x + speed + 11, e.y + 11, 11, walls)) e.x += speed;
+                else if (!col(e.x - speed + 11, e.y + 11, 11, walls)) e.x -= speed;
+            }
+
             if(ply.invuln <= 0 && Math.sqrt((e.x+11-ply.x)**2 + (e.y+11-ply.y)**2) < (11+ply.s)){
-                lives--; ply.invuln = 60; // Kebal selama 1 detik
+                lives--; ply.invuln = 60;
                 if(lives <= 0){ isGO = true; gOS.style.display="block"; }
             }
         });

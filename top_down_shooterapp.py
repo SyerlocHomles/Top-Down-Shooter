@@ -1,9 +1,9 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Island.io: Smart AI", layout="centered")
-st.title("🧠 Island.io: Smart Navigation")
-st.write("AI sekarang bisa 'menyelinap' di antara tembok untuk mencarimu!")
+st.set_page_config(page_title="Island.io: Pro AI", layout="centered")
+st.title("🛡️ Island.io: Smart Navigation")
+st.write("AI sekarang punya sistem 'Wall Following'. Mereka akan mencari celah!")
 
 game_html = """
 <div style="text-align: center; position: relative;">
@@ -32,7 +32,8 @@ game_html = """
         let ok = false; while(!ok){
             let rx = Math.random()*560+20, ry = Math.random()*360+20;
             if(!col(rx, ry, 15, walls) && Math.sqrt((rx-ply.x)**2 + (ry-ply.y)**2) > 150){ 
-                enemies.push({x:rx, y:ry, s:22, sideDir: (Math.random() < 0.5 ? 1 : -1)}); 
+                // mode: 'seek' (kejar player), 'avoid' (menyusuri dinding)
+                enemies.push({x:rx, y:ry, s:22, mode: 'seek', turnTimer: 0, dir: {x:0, y:0}}); 
                 ok = true; 
             }
         }
@@ -65,25 +66,29 @@ game_html = """
         });
 
         enemies.forEach(e => {
-            let speed = 1.2;
-            let targetX = ply.x - e.x, targetY = ply.y - e.y;
-            let dist = Math.sqrt(targetX**2 + targetY**2);
-            let vx = (targetX / dist) * speed;
-            let vy = (targetY / dist) * speed;
+            let spd = 1.3;
+            if (e.mode === 'seek') {
+                let dx = ply.x - e.x, dy = ply.y - e.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                let vx = (dx/dist)*spd, vy = (dy/dist)*spd;
 
-            // Cek tabrakan di depan
-            if (!col(e.x + vx + 11, e.y + vy + 11, 11, walls)) {
-                e.x += vx; e.y += vy;
-            } else {
-                // LOGIKA SUMBU Z (Menyamping)
-                // Jika terhalang, musuh akan mencoba bergerak tegak lurus (menyamping)
-                let sx = -vy * 2; // Vektor tegak lurus
-                let sy = vx * 2;
-                if (!col(e.x + sx + 11, e.y + sy + 11, 11, walls)) {
-                    e.x += sx * e.sideDir; e.y += sy * e.sideDir;
+                if (!col(e.x + vx + 11, e.y + vy + 11, 11, walls)) {
+                    e.x += vx; e.y += vy;
                 } else {
-                    e.sideDir *= -1; // Balik arah jika sisi samping juga mentok
+                    // Masuk ke mode 'avoid' (belok 90 derajat)
+                    e.mode = 'avoid';
+                    e.turnTimer = 40 + Math.random()*40; // durasi melipir dinding
+                    e.dir = Math.abs(dx) > Math.abs(dy) ? {x:0, y:dy>0?spd:-spd} : {x:dx>0?spd:-spd, y:0};
                 }
+            } else {
+                // Mode Avoid: Paksa gerak ke satu arah menyamping
+                if (!col(e.x + e.dir.x + 11, e.y + e.dir.y + 11, 11, walls)) {
+                    e.x += e.dir.x; e.y += e.dir.y;
+                } else {
+                    e.dir.x *= -1; e.dir.y *= -1; // Balik arah kalau mentok lagi
+                }
+                e.turnTimer--;
+                if (e.turnTimer <= 0) e.mode = 'seek';
             }
 
             if(ply.inv <= 0 && Math.sqrt((e.x+11-ply.x)**2 + (e.y+11-ply.y)**2) < (11+ply.s)){

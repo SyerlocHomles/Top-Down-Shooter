@@ -1,17 +1,17 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Tactical Pro Evolution", layout="centered")
-st.title("⚔️ Island.io: Tactical Pro Evolution")
+st.set_page_config(page_title="Island.io: Ultimate Balance", layout="centered")
+st.title("⚔️ Island.io: Ultimate Balance")
 
 if "char" not in st.session_state:
     st.session_state.char = None
 
 cols = st.columns(3)
 classes = [
-    ("🔵 Assault (Rocket)", "#00a2e8", 3, 4.5, "assault"),
-    ("🟢 Tank (Shield)", "#2ecc71", 6, 3.0, "tank"),
-    ("🟡 Scout (Dash)", "#f1c40f", 2, 6.8, "scout")
+    ("🔵 Assault (Kill to Charge)", "#00a2e8", 3, 4.5, "assault"),
+    ("🟢 Tank (10s Cooldown)", "#2ecc71", 6, 3.0, "tank"),
+    ("🟡 Scout (20s Cooldown)", "#f1c40f", 2, 6.8, "scout")
 ]
 
 for i, (name, col, hp, spd, t) in enumerate(classes):
@@ -32,16 +32,15 @@ game_html = f"""
     </div>
     
     <div style="margin: 0 auto 10px; width: 250px;">
-        <div id="ui-skill-text" style="color:#00e5ff; font-size: 11px; font-weight:bold;">ULTIMATE READY (SPACE)</div>
+        <div id="ui-skill-text" style="color:#00e5ff; font-size: 11px; font-weight:bold;">ULTIMATE STATUS</div>
         <div style="width:100%; height:12px; background:#333; border-radius:6px; overflow:hidden; border: 1px solid #555;">
-            <div id="skill-bar" style="width:0%; height:100%; background: linear-gradient(90deg, #009dff, #00e5ff);"></div>
+            <div id="skill-bar" style="width:0%; height:100%; background: linear-gradient(90deg, #ff8c00, #ffea00);"></div>
         </div>
     </div>
     <div id="buff-ui" style="color:#f1c40f; font-size:12px; font-weight:bold; min-height:15px; margin-bottom:5px;"></div>
 
     <div id="upgrade-menu" style="display:none; position:absolute; width:100%; height:100%; top:0; left:0; background:rgba(0,0,0,0.95); z-index:1000; border-radius:11px;">
         <h2 style="color:white; margin-top:100px;">⬆️ BOSS DEFEATED!</h2>
-        <p style="color:#2ecc71;">Map Ter-shuffle & Dinding Berkurang!</p>
         <button onclick="window.applyUpgrade('hp')" style="padding:12px 24px; background:#2ecc71; color:white; border:none; margin:10px; border-radius:8px; cursor:pointer; font-weight:bold;">+1 NYAWA</button>
         <button onclick="window.applyUpgrade('dmg')" style="padding:12px 24px; background:#e74c3c; color:white; border:none; margin:10px; border-radius:8px; cursor:pointer; font-weight:bold;">+1 DAMAGE</button>
     </div>
@@ -59,10 +58,11 @@ game_html = f"""
     let score = 0, health = {st.session_state.char['hp']}, level = 1, gameOver = false;
     let keys = {{}}, bullets = [], eBullets = [], enemies = [], walls = [], items = [], particles = [], boss = null;
     
+    // player.sM (Max Skill Points) = 100
     let player = {{
         x: 300, y: 200, r: 12, speed: {st.session_state.char['spd']},
         type: '{st.session_state.char['type']}', color: '{st.session_state.char['col']}',
-        sT: 0, sM: 500, shield: false,
+        sT: 0, sM: 100, shield: false,
         buffs: {{ speed: 0, triple: 0 }},
         dmg: 5, inv: 0
     }};
@@ -75,7 +75,6 @@ game_html = f"""
         requestAnimationFrame(loop);
     }};
 
-    // PERBAIKAN: Memberikan jarak antar dinding agar kroco bisa lewat
     function initWalls() {{
         walls = [];
         let count = Math.max(12 - (level * 2), 4);
@@ -85,17 +84,11 @@ game_html = f"""
             let w = 40, h = 40;
             let x = 50 + Math.floor(Math.random() * 10) * 50;
             let y = 50 + Math.floor(Math.random() * 6) * 50;
-            
-            // Cek apakah terlalu dekat dengan karakter
             if(Math.hypot(x+w/2-300, y+h/2-200) < 80) continue;
-            
-            // Cek apakah menempel dengan dinding lain (jarak min 20px)
             let tooClose = false;
             for(let wall of walls) {{
                 if(x < wall.x + wall.w + 25 && x + w + 25 > wall.x &&
-                   y < wall.y + wall.h + 25 && y + h + 25 > wall.y) {{
-                    tooClose = true; break;
-                }}
+                   y < wall.y + wall.h + 25 && y + h + 25 > wall.y) {{ tooClose = true; break; }}
             }}
             if(!tooClose) walls.push({{x,y,w,h}});
         }}
@@ -115,7 +108,7 @@ game_html = f"""
     function triggerRespawn() {{
         health--;
         spawnExplosion(player.x, player.y, "#ff0000");
-        player.inv = 180; // 3 detik kedap kedip
+        player.inv = 180;
         if(health <= 0) gameOver = true;
     }}
 
@@ -126,14 +119,14 @@ game_html = f"""
 
     function useUlt() {{
         if(player.sT < player.sM || gameOver || player.inv > 0) return;
-        player.sT = 0;
+        player.sT = 0; 
         if(player.type==='assault') {{
             for(let i=0; i<12; i++) setTimeout(()=>fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), true, true), i*100);
         }} else if(player.type==='tank') {{
             player.shield=true; setTimeout(()=>player.shield=false, 6000);
         }} else if(player.type==='scout') {{
             let a = Math.atan2(my-player.y, mx-player.x);
-            let tx = player.x + Math.cos(a)*180, ty = player.y + Math.sin(a)*180;
+            let tx = player.x + Math.cos(a)*200, ty = player.y + Math.sin(a)*200;
             if(!isInsideWall(tx, ty, player.r)) {{ player.x=tx; player.y=ty; spawnExplosion(tx,ty,player.color); }}
         }}
     }}
@@ -159,8 +152,16 @@ game_html = f"""
         if(!isInsideWall(nx, player.y, player.r)) player.x=nx;
         if(!isInsideWall(player.x, ny, player.r)) player.y=ny;
 
-        if(player.sT < player.sM) player.sT += 1.5;
-        uBar.style.width = Math.min(100, (player.sT/player.sM*100)) + '%';
+        // --- NEW ULTIMATE RECHARGE LOGIC ---
+        if(player.type === 'tank') {{
+            if(player.sT < player.sM) player.sT += (100 / (10 * 60)); // 10 Detik
+        }} else if(player.type === 'scout') {{
+            if(player.sT < player.sM) player.sT += (100 / (20 * 60)); // 20 Detik
+        }}
+        // Assault (player.type === 'assault') is manually added in enemy death logic
+
+        uBar.style.width = Math.min(100, player.sT) + '%';
+        uBar.style.background = player.sT >= 100 ? '#00ffcc' : 'linear-gradient(90deg, #ff8c00, #ffea00)';
 
         if(player.buffs.speed > 0) player.buffs.speed--;
         if(player.buffs.triple > 0) player.buffs.triple--;
@@ -173,6 +174,10 @@ game_html = f"""
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.rk?player.dmg*4:player.dmg;
                         if(e.hp<=0) {{ 
+                            // Add Kill-based Ultimate points
+                            if(player.type === 'assault') player.sT = Math.min(100, player.sT + 10);
+                            if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100 / 20)); // +1 detik per kill
+
                             if(!boss) {{
                                 if(e.color==='#9b59b6') score+=10;
                                 else if(e.color==='#e74c3c') score+=5;
@@ -230,7 +235,6 @@ game_html = f"""
             if(boss.hp <= 0) {{ boss=null; uMenu.style.display='block'; }}
         }}
 
-        // PERBAIKAN: Respawn kroco minimal jarak 150px dari player
         if(enemies.length < 5) {{
             let ex, ey, dist;
             do {{

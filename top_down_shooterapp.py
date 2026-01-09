@@ -1,14 +1,14 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Boss Hunt", layout="centered")
-st.title("👹 Island.io: Nightmare Boss")
-st.write("Skor 100 = BOSS MUNCUL! (Gunakan Triple Shot Biru)")
+st.set_page_config(page_title="Island.io: Bullet Hell", layout="centered")
+st.title("👹 Island.io: Boss Special Moves")
+st.write("Waspada: Boss bisa nembak masif & punya pelindung HEALING!")
 
 gh = """
 <div style="text-align:center; background:#111; padding:10px; border-radius:10px;">
     <h2 id="s" style="color:white; margin:0;">Skor: 0 | Nyawa: ❤️❤️❤️</h2>
-    <canvas id="c" width="600" height="400" style="border:3px solid #444; background:#1a1a1a; cursor:crosshair;"></canvas>
+    <canvas id="c" width="600" height="400" style="border:3px solid #444; background:#111; cursor:crosshair;"></canvas>
 </div>
 <script>
     const cv=document.getElementById("c"), ctx=cv.getContext("2d"), stB=document.getElementById("s");
@@ -27,12 +27,12 @@ gh = """
         if(boss) return; let ok=false; while(!ok){
             let rx=Math.random()*560+20, ry=Math.random()*360+20;
             if(!col(rx,ry,15,wls) && Math.sqrt((rx-ply.x)**2+(ry-ply.y)**2)>150){
-                let r=Math.random(), t=r<0.6?{c:'#e74c3c',s:20,sp:1.4,h:1,sc:5}:(r<0.85?{c:'#2ecc71',s:15,sp:2.6,h:1,sc:10}:{c:'#9b59b6',s:30,sp:0.9,h:3,sc:20});
+                let r=Math.random(), t=r<0.6?{c:'#e74c3c',s:20,sp:1.5,h:1,sc:5}:(r<0.85?{c:'#2ecc71',s:15,sp:2.6,h:1,sc:10}:{c:'#9b59b6',s:30,sp:0.9,h:3,sc:20});
                 enms.push({x:rx,y:ry,...t,m:'sk',tT:0,d:{x:0,y:0}}); ok=true;
             }
         }
     }
-    function spB(){ boss={x:50,y:50,s:55,h:25,mH:25,sp:0.8,m:'sk',tT:0,d:{x:0,y:0},fT:0}; enms=[]; }
+    function spB(){ boss={x:300,y:50,s:60,h:30,mH:30,sp:0.8,m:'sk',tT:0,d:{x:0,y:0},fT:0,sT:0,sh:false}; enms=[]; }
     function spI(){ let t=Math.random()<0.5?'speed':'triple', rx=Math.random()*500+50, ry=Math.random()*300+50; if(!col(rx,ry,10,wls)) itms.push({x:rx,y:ry,t:t}); }
 
     function init(){
@@ -55,22 +55,35 @@ gh = """
     }
 
     function upd(){
-        if(go) return; let cs=ply.pw==='speed'?7.5:4.2, nx=ply.x, ny=ply.y;
+        if(go) return; let cs=ply.pw==='speed'?7.8:4.3, nx=ply.x, ny=ply.y;
         if(ks["KeyW"]) ny-=cs; if(ks["KeyS"]) ny+=cs; if(ks["KeyA"]) nx-=cs; if(ks["KeyD"]) nx+=cs;
         if(!col(nx,ny,ply.s,wls)){ ply.x=Math.max(ply.s,Math.min(588,nx)); ply.y=Math.max(ply.s,Math.min(388,ny)); }
         if(ply.inv>0) ply.inv--; if(ply.pT>0 && --ply.pT<=0) ply.pw=null;
 
         itms.forEach((it,i)=>{ if(Math.sqrt((it.x-ply.x)**2+(it.y-ply.y)**2)<25){ ply.pw=it.t; ply.pT=350; itms.splice(i,1); }});
         buls.forEach((b,i)=>{
-            b.x+=b.vx; b.y+=b.vy; if(col(b.x,b.y,2,wls)||b.x<0||b.x>600||b.y<0||b.y>400) buls.splice(i,1);
-            if(boss && b.x>boss.x && b.x<boss.x+boss.s && b.y>boss.y && b.y<boss.y+boss.s){ boss.h--; buls.splice(i,1); if(boss.h<=0){ sc+=150; boss=null; for(let j=0; j<4; j++) spE(); }}
-            enms.forEach((e,ei)=>{ if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){ e.h--; buls.splice(i,1); if(e.h<=0){ sc+=e.sc; enms.splice(ei,1); if(sc%100===0) spB(); else spE(); }}});
+            b.x+=b.vx; b.y+=b.vy; if(col(b.x,b.y,2,wls)||b.x<0||b.x>600||b.y<0||b.y>400){ buls.splice(i,1); return; }
+            if(boss && b.x>boss.x && b.x<boss.x+boss.s && b.y>boss.y && b.y<boss.y+boss.s){ 
+                if(!boss.sh){ boss.h--; if(boss.h<=0){ sc+=200; boss=null; for(let j=0; j<4; j++) spE(); } }
+                buls.splice(i,1);
+            }
+            enms.forEach((e,ei)=>{ if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){ e.h--; buls.splice(i,1); if(e.h<=0){ sc+=e.sc; enms.splice(ei,1); if(sc>0 && sc%100===0) spB(); else spE(); }}});
         });
 
         ebuls.forEach((eb,i)=>{ eb.x+=eb.vx; eb.y+=eb.vy; if(eb.x<0||eb.x>600||eb.y<0||eb.y>400) ebuls.splice(i,1); if(ply.inv<=0 && Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s){ li--; ply.inv=60; ebuls.splice(i,1); if(li<=0) go=true; }});
 
         if(boss){
-            move(boss); boss.fT++; if(boss.fT>50){ let a=Math.atan2(ply.y-boss.y, ply.x-boss.x); ebuls.push({x:boss.x+25,y:boss.y+25,vx:Math.cos(a)*6,vy:Math.sin(a)*6}); boss.fT=0; }
+            move(boss); boss.fT++; boss.sT++;
+            // Burst Fire (Phase 1)
+            if(boss.fT > 120) {
+                for(let a=0; a<6.2; a+=0.5) ebuls.push({x:boss.x+boss.s/2,y:boss.y+boss.s/2,vx:Math.cos(a)*5,vy:Math.sin(a)*5});
+                boss.fT = 0;
+            }
+            // Shield & Healing (Phase 2)
+            if(boss.sT > 300) { boss.sh = true; if(boss.h < boss.mH) boss.h += 0.05; if(boss.sT > 450) { boss.sh = false; boss.sT = 0; } }
+            // Normal Fire
+            if(boss.fT % 30 === 0) { let a=Math.atan2(ply.y-boss.y, ply.x-boss.x); ebuls.push({x:boss.x+boss.s/2,y:boss.y+boss.s/2,vx:Math.cos(a)*6,vy:Math.sin(a)*6}); }
+            
             if(ply.inv<=0 && ply.x>boss.x && ply.x<boss.x+boss.s && ply.y>boss.y && ply.y<boss.y+boss.s){ li--; ply.inv=60; if(li<=0) go=true; }
         }
         enms.forEach(e=>{ move(e); if(ply.inv<=0 && Math.sqrt((e.x+e.s/2-ply.x)**2+(e.y+e.s/2-ply.y)**2)<(e.s/2+ply.s)){ li--; ply.inv=60; if(li<=0) go=true; }});
@@ -82,9 +95,13 @@ gh = """
         ctx.clearRect(0,0,600,400); ctx.fillStyle="#333"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
         itms.forEach(it=>{ ctx.fillStyle=it.t==='speed'?"#f1c40f":"#3498db"; ctx.beginPath(); ctx.arc(it.x,it.y,9,0,7); ctx.fill(); });
         enms.forEach(e=>{ ctx.fillStyle=e.c; ctx.fillRect(e.x,e.y,e.s,e.s); });
-        if(boss){ ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s); ctx.fillStyle="#2ecc71"; ctx.fillRect(boss.x,boss.y-12,(boss.h/boss.mH)*boss.s,6); }
+        if(boss){ 
+            if(boss.sh) { ctx.strokeStyle="#2ecc71"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(boss.x+boss.s/2, boss.y+boss.s/2, boss.s/1.2, 0, 7); ctx.stroke(); }
+            ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s); 
+            ctx.fillStyle="#2ecc71"; ctx.fillRect(boss.x,boss.y-12,(boss.h/boss.mH)*boss.s,6); 
+        }
         ctx.fillStyle="#f39c12"; buls.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill(); });
-        ctx.fillStyle="red"; ebuls.forEach(eb=>{ ctx.beginPath(); ctx.arc(eb.x,eb.y,6,0,7); ctx.fill(); });
+        ctx.fillStyle="red"; ebuls.forEach(eb=>{ ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,7); ctx.fill(); });
         if(ply.inv%10<5){ ctx.fillStyle="#00a2e8"; ctx.beginPath(); ctx.arc(ply.x,ply.y,ply.s,0,7); ctx.fill(); }
         upd(); requestAnimationFrame(drw);
     }

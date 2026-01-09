@@ -67,4 +67,28 @@ gh = """
             enms.forEach((e,ei)=>{ if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){ e.h--; buls.splice(i,1); if(e.h<=0){ sc+=e.sc; enms.splice(ei,1); if(sc%100===0) spB(); else spE(); }}});
         });
 
-        ebuls.forEach((eb,i)=>{ eb.x+=eb.vx; eb.y+=eb.vy; if(eb.x<0||eb.x>600||eb.y<0||eb.y>400) ebuls.splice(i,1); if(ply.inv<=0 && Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s){ li--; ply.
+        ebuls.forEach((eb,i)=>{ eb.x+=eb.vx; eb.y+=eb.vy; if(eb.x<0||eb.x>600||eb.y<0||eb.y>400) ebuls.splice(i,1); if(ply.inv<=0 && Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s){ li--; ply.inv=60; ebuls.splice(i,1); if(li<=0) go=true; }});
+
+        if(boss){
+            move(boss); boss.fT++; if(boss.fT>50){ let a=Math.atan2(ply.y-boss.y, ply.x-boss.x); ebuls.push({x:boss.x+25,y:boss.y+25,vx:Math.cos(a)*6,vy:Math.sin(a)*6}); boss.fT=0; }
+            if(ply.inv<=0 && ply.x>boss.x && ply.x<boss.x+boss.s && ply.y>boss.y && ply.y<boss.y+boss.s){ li--; ply.inv=60; if(li<=0) go=true; }
+        }
+        enms.forEach(e=>{ move(e); if(ply.inv<=0 && Math.sqrt((e.x+e.s/2-ply.x)**2+(e.y+e.s/2-ply.y)**2)<(e.s/2+ply.s)){ li--; ply.inv=60; if(li<=0) go=true; }});
+        stB.innerText=`Skor: ${sc} | Nyawa: ${"❤️".repeat(li)} ${ply.pw?'| '+ply.pw.toUpperCase():''}`;
+        if(go) { ctx.fillStyle="white"; ctx.font="40px Arial"; ctx.fillText("GAME OVER", 180, 200); }
+    }
+
+    function drw(){
+        ctx.clearRect(0,0,600,400); ctx.fillStyle="#333"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
+        itms.forEach(it=>{ ctx.fillStyle=it.t==='speed'?"#f1c40f":"#3498db"; ctx.beginPath(); ctx.arc(it.x,it.y,9,0,7); ctx.fill(); });
+        enms.forEach(e=>{ ctx.fillStyle=e.c; ctx.fillRect(e.x,e.y,e.s,e.s); });
+        if(boss){ ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s); ctx.fillStyle="#2ecc71"; ctx.fillRect(boss.x,boss.y-12,(boss.h/boss.mH)*boss.s,6); }
+        ctx.fillStyle="#f39c12"; buls.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill(); });
+        ctx.fillStyle="red"; ebuls.forEach(eb=>{ ctx.beginPath(); ctx.arc(eb.x,eb.y,6,0,7); ctx.fill(); });
+        if(ply.inv%10<5){ ctx.fillStyle="#00a2e8"; ctx.beginPath(); ctx.arc(ply.x,ply.y,ply.s,0,7); ctx.fill(); }
+        upd(); requestAnimationFrame(drw);
+    }
+    init(); drw();
+</script>
+"""
+cp.html(gh, height=550)

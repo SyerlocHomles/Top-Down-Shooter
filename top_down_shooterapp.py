@@ -1,8 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Tactical Battle Pro", layout="centered")
-st.title("⚔️ Island.io: Tactical Battle Pro")
+st.set_page_config(page_title="Island.io: Tactical Pro Evolution", layout="centered")
+st.title("⚔️ Island.io: Tactical Pro Evolution")
 
 if "char" not in st.session_state:
     st.session_state.char = None
@@ -39,9 +39,9 @@ game_html = f"""
     </div>
     <div id="buff-ui" style="color:#f1c40f; font-size:12px; font-weight:bold; min-height:15px; margin-bottom:5px;"></div>
 
-    <div id="upgrade-menu" style="display:none; position:absolute; width:100%; height:100%; top:0; left:0; background:rgba(0,0,0,0.92); z-index:1000; border-radius:11px;">
+    <div id="upgrade-menu" style="display:none; position:absolute; width:100%; height:100%; top:0; left:0; background:rgba(0,0,0,0.95); z-index:1000; border-radius:11px;">
         <h2 style="color:white; margin-top:100px;">⬆️ BOSS DEFEATED!</h2>
-        <p style="color:#2ecc71;">Level Up! Pilih Bonus Permanen:</p>
+        <p style="color:#2ecc71;">Map Ter-shuffle & Dinding Berkurang!</p>
         <button onclick="window.applyUpgrade('hp')" style="padding:12px 24px; background:#2ecc71; color:white; border:none; margin:10px; border-radius:8px; cursor:pointer; font-weight:bold;">+1 NYAWA</button>
         <button onclick="window.applyUpgrade('dmg')" style="padding:12px 24px; background:#e74c3c; color:white; border:none; margin:10px; border-radius:8px; cursor:pointer; font-weight:bold;">+1 DAMAGE</button>
     </div>
@@ -62,7 +62,7 @@ game_html = f"""
     let player = {{
         x: 300, y: 200, r: 12, speed: {st.session_state.char['spd']},
         type: '{st.session_state.char['type']}', color: '{st.session_state.char['col']}',
-        sT: 0, sM: 400, shield: false,
+        sT: 0, sM: 500, shield: false,
         buffs: {{ speed: 0, triple: 0 }},
         dmg: 5, inv: 0
     }};
@@ -75,13 +75,29 @@ game_html = f"""
         requestAnimationFrame(loop);
     }};
 
+    // PERBAIKAN: Memberikan jarak antar dinding agar kroco bisa lewat
     function initWalls() {{
         walls = [];
-        let count = Math.max(14 - level, 6); 
-        for(let i=0; i<count; i++) {{
-            let w = 35+Math.random()*40, h = 35+Math.random()*40;
-            let x = 50+Math.random()*450, y = 50+Math.random()*250;
-            if(Math.hypot(x+w/2-300, y+h/2-200) > 80) walls.push({{x,y,w,h}});
+        let count = Math.max(12 - (level * 2), 4);
+        let attempts = 0;
+        while(walls.length < count && attempts < 100) {{
+            attempts++;
+            let w = 40, h = 40;
+            let x = 50 + Math.floor(Math.random() * 10) * 50;
+            let y = 50 + Math.floor(Math.random() * 6) * 50;
+            
+            // Cek apakah terlalu dekat dengan karakter
+            if(Math.hypot(x+w/2-300, y+h/2-200) < 80) continue;
+            
+            // Cek apakah menempel dengan dinding lain (jarak min 20px)
+            let tooClose = false;
+            for(let wall of walls) {{
+                if(x < wall.x + wall.w + 25 && x + w + 25 > wall.x &&
+                   y < wall.y + wall.h + 25 && y + h + 25 > wall.y) {{
+                    tooClose = true; break;
+                }}
+            }}
+            if(!tooClose) walls.push({{x,y,w,h}});
         }}
     }}
 
@@ -99,7 +115,6 @@ game_html = f"""
     function triggerRespawn() {{
         health--;
         spawnExplosion(player.x, player.y, "#ff0000");
-        spawnExplosion(player.x, player.y, "#ffffff");
         player.inv = 180; // 3 detik kedap kedip
         if(health <= 0) gameOver = true;
     }}
@@ -111,14 +126,14 @@ game_html = f"""
 
     function useUlt() {{
         if(player.sT < player.sM || gameOver || player.inv > 0) return;
-        player.sT = 0; // Bar langsung habis
+        player.sT = 0;
         if(player.type==='assault') {{
             for(let i=0; i<12; i++) setTimeout(()=>fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), true, true), i*100);
         }} else if(player.type==='tank') {{
             player.shield=true; setTimeout(()=>player.shield=false, 6000);
         }} else if(player.type==='scout') {{
             let a = Math.atan2(my-player.y, mx-player.x);
-            let tx = player.x + Math.cos(a)*200, ty = player.y + Math.sin(a)*200;
+            let tx = player.x + Math.cos(a)*180, ty = player.y + Math.sin(a)*180;
             if(!isInsideWall(tx, ty, player.r)) {{ player.x=tx; player.y=ty; spawnExplosion(tx,ty,player.color); }}
         }}
     }}
@@ -144,9 +159,8 @@ game_html = f"""
         if(!isInsideWall(nx, player.y, player.r)) player.x=nx;
         if(!isInsideWall(player.x, ny, player.r)) player.y=ny;
 
-        // Ult Bar Logic
-        if(player.sT < player.sM) player.sT += 1;
-        uBar.style.width = (player.sT/player.sM*100) + '%';
+        if(player.sT < player.sM) player.sT += 1.5;
+        uBar.style.width = Math.min(100, (player.sT/player.sM*100)) + '%';
 
         if(player.buffs.speed > 0) player.buffs.speed--;
         if(player.buffs.triple > 0) player.buffs.triple--;
@@ -216,13 +230,18 @@ game_html = f"""
             if(boss.hp <= 0) {{ boss=null; uMenu.style.display='block'; }}
         }}
 
+        // PERBAIKAN: Respawn kroco minimal jarak 150px dari player
         if(enemies.length < 5) {{
-            let ex = Math.random()*540+30, ey = Math.random()*340+30;
-            if(!isInsideWall(ex, ey, 25)) {{
-                let r = Math.random();
-                let t = r<0.4 ? {{c:'#e74c3c', s:20, sp:1.4, h:5}} : r<0.7 ? {{c:'#2ecc71', s:28, sp:0.7, h:12}} : {{c:'#9b59b6', s:18, sp:2.2, h:4}};
-                enemies.push({{x:ex, y:ey, color:t.c, s:t.s, sp:t.sp, hp:t.h, fT:0}});
-            }}
+            let ex, ey, dist;
+            do {{
+                ex = 50 + Math.random() * 500;
+                ey = 50 + Math.random() * 300;
+                dist = Math.hypot(player.x - ex, player.y - ey);
+            }} while (isInsideWall(ex, ey, 25) || dist < 150);
+
+            let r = Math.random();
+            let t = r<0.4 ? {{c:'#e74c3c', s:20, sp:1.4, h:5}} : r<0.7 ? {{c:'#2ecc71', s:28, sp:0.7, h:12}} : {{c:'#9b59b6', s:18, sp:2.2, h:4}};
+            enemies.push({{x:ex, y:ey, color:t.c, s:t.s, sp:t.sp, hp:t.h, fT:0}});
         }}
 
         particles.forEach((p,i)=>{{ p.x+=p.vx; p.y+=p.vy; p.life--; if(p.life<=0) particles.splice(i,1); }});
@@ -254,7 +273,6 @@ game_html = f"""
             ctx.fillStyle=boss.sh?'#00e5ff':'#ff4d4d'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x, boss.y-12, (boss.hp/boss.mH)*boss.w, 8);
         }}
-        // Respawn / Invulnerable Effect (Kedap kedip)
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             ctx.fillStyle=player.color; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,7); ctx.fill();
             if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(player.x,player.y,player.r+6,0,7); ctx.stroke(); }}

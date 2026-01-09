@@ -25,6 +25,7 @@ if not st.session_state.char:
 
 c = st.session_state.char
 
+# Menggunakan triple quotes dengan hati-hati agar tidak bentrok dengan JS
 game_html = f"""
 <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 2px solid #333;">
     <h2 id="s" style="color:white; margin:0; font-family:Arial;">Skor: 0 | Nyawa: </h2>
@@ -47,15 +48,16 @@ game_html = f"""
         if(ply.pw === 'triple') {{ fire(a + 0.2); fire(a - 0.2); }}
     }};
 
+    // FUNGSI LEDAKAN (PARTIKEL)
     function spawnExplosion(x, y, color, count=10) {{
         for(let i=0; i<count; i++) {{
             pX.push({{
                 x: x, y: y,
-                vx: (Math.random()-0.5)*6,
-                vy: (Math.random()-0.5)*6,
-                life: 30 + Math.random()*20,
+                vx: (Math.random()-0.5)*8,
+                vy: (Math.random()-0.5)*8,
+                life: 20 + Math.random()*20,
                 col: color,
-                s: Math.random()*4+1
+                s: Math.random()*5+2
             }});
         }}
     }}
@@ -83,31 +85,43 @@ game_html = f"""
         
         let curSpd = (ply.pw === 'speed') ? ply.spd * 1.7 : ply.spd;
         let nx=ply.x, ny=ply.y;
-        if(ks["KeyW"]) ny-=curSpd; if(ks["KeyS"]) ny+=curSpd; if(ks["KeyA"]) nx-=curSpd; if(ks["KeyD"]) nx+=curSpd;
+        if(ks["KeyW"]) ny-=curSpd; if(ks["KeyS"]) ny+=curSpd; if(ks["KeyA"]) nx-=curSpd; if(ks["KeyD"]) nx+=currentSpd;
         if(!col(nx,ny,ply.s,wls)){{ ply.x=Math.max(ply.s,Math.min(588,nx)); ply.y=Math.max(ply.s,Math.min(388,ny)); }}
+        
         if(ply.inv>0) ply.inv--;
-        if(ply.pT > 0) {{ ply.pT--; pInf.innerText = "BUFF: " + ply.pw.toUpperCase() + " (" + Math.ceil(ply.pT/60) + "s)"; if(ply.pT<=0) {{ ply.pw=null; pInf.innerText=""; }} }}
+        if(ply.pT > 0) {{ 
+            ply.pT--; 
+            pInf.innerText = "BUFF: " + ply.pw.toUpperCase() + " (" + Math.ceil(ply.pT/60) + "s)"; 
+            if(ply.pT<=0) {{ ply.pw=null; pInf.innerText=""; }} 
+        }}
 
+        // Ambil Item dengan efek ledakan kecil
         itms.forEach((it, i) => {{
-            if(Math.sqrt((it.x-ply.x)**2+(it.y-ply.y)**2) < 25) {{ ply.pw=it.t; ply.pT=450; itms.splice(i, 1); spawnExplosion(it.x, it.y, "#fff", 15); sk=5; }}
+            if(Math.sqrt((it.x-ply.x)**2+(it.y-ply.y)**2) < 25) {{ 
+                ply.pw=it.t; ply.pT=450; itms.splice(i, 1); 
+                spawnExplosion(it.x, it.y, "#fff", 15); sk=5; 
+            }}
         }});
 
+        // Peluru menabrak musuh
         buls.forEach((b,i)=>{{
             b.x+=b.vx; b.y+=b.vy;
             if(col(b.x,b.y,4,wls) || b.x<0 || b.x>600 || b.y<0 || b.y>400) buls.splice(i,1);
             enms.forEach((e,ei)=>{{
                 if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){{
                     e.h-=5; buls.splice(i,1);
-                    spawnExplosion(b.x, b.y, "#ffa500", 5);
+                    spawnExplosion(b.x, b.y, "#ffa500", 5); // Percikan kena hit
                     if(e.h<=0){{ 
-                        sc+=e.sc; spawnExplosion(e.x+e.s/2, e.y+e.s/2, e.c, 20); 
-                        enms.splice(ei,1); sk=10;
+                        sc+=e.sc; 
+                        spawnExplosion(e.x+e.s/2, e.y+e.s/2, e.c, 25); // Ledakan musuh hancur
+                        enms.splice(ei,1); sk=10; // Screen shake
                         if(sc%100===0 && !boss) {{ boss={{x:300,y:50,s:60,h:400,mH:400,sp:0.8,fT:0}}; initLevel(); }}
                     }}
                 }}
             }});
         }});
 
+        // Update Partikel Ledakan
         pX.forEach((p, i) => {{
             p.x += p.vx; p.y += p.vy; p.life--;
             if(p.life <= 0) pX.splice(i, 1);
@@ -116,37 +130,5 @@ game_html = f"""
         enms.forEach(e=>{{
             let dx=ply.x-e.x, dy=ply.y-e.y, d=Math.sqrt(dx*dx+dy*dy);
             e.x+=(dx/d)*e.sp; e.y+=(dy/d)*e.sp;
-            if(ply.inv<=0 && Math.sqrt((e.x+e.s/2-ply.x)**2+(e.y+e.s/2-ply.y)**2)<(e.s/2+ply.s)){{ li--; ply.inv=60; sk=20; spawnExplosion(ply.x, ply.y, "#ff0000", 25); if(li<=0) go=true; }}
-        }});
-
-        if(boss){{
-            let dx=ply.x-boss.x, dy=ply.y-boss.y, d=Math.sqrt(dx*dx+dy*dy);
-            boss.x+=(dx/d)*boss.sp; boss.y+=(dy/d)*boss.sp;
-            boss.fT++; if(boss.fT > 100) {{ spawnExplosion(boss.x+30, boss.y+30, "#ff4500", 40); sk=15; boss.fT=0; }}
-        }}
-
-        let hearts = ""; for(let i=0; i<li; i++) hearts += "❤️";
-        stB.innerHTML = "Skor: " + sc + " | Nyawa: " + hearts;
-    }}}
-
-    function draw(){{{
-        ctx.save();
-        if(sk > 0) ctx.translate((Math.random()-0.5)*sk, (Math.random()-0.5)*sk);
-        ctx.clearRect(0,0,600,400); 
-        ctx.fillStyle="#444"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
-        itms.forEach(it=>{{ ctx.fillStyle=it.t==='speed'?"#f1c40f":"#3498db"; ctx.beginPath(); ctx.arc(it.x,it.y,10,0,7); ctx.fill(); }});
-        enms.forEach(e=>{{ ctx.fillStyle=e.c; ctx.fillRect(e.x,e.y,e.s,e.s); }});
-        if(boss){{ ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s); }}
-        pX.forEach(p=>{{ ctx.fillStyle=p.col; ctx.globalAlpha=p.life/50; ctx.fillRect(p.x,p.y,p.s,p.s); }});
-        ctx.globalAlpha=1;
-        ctx.fillStyle="#f1c40f"; buls.forEach(b=>{{ ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill(); }});
-        if(ply.inv%10<5){{ ctx.fillStyle=ply.col; ctx.beginPath(); ctx.arc(ply.x,ply.y,ply.s,0,7); ctx.fill(); }}
-        ctx.restore();
-        update(); requestAnimationFrame(draw);
-    }}}
-
-    initLevel(); setInterval(()=>{{ if(itms.length<2) itms.push({{x:Math.random()*540+30, y:Math.random()*340+30, t:Math.random()<0.5?'speed':'triple'}}); }}, 6000); draw();
-</script>
-"""
-
-cp.html(game_html, height=600)
+            if(ply.inv<=0 && Math.sqrt((e.x+e.s/2-ply.x)**2+(e.y+e.s/2-ply.y)**2)<(e.s/2+ply.s)){{ 
+                li--; ply.inv=60; sk=25;

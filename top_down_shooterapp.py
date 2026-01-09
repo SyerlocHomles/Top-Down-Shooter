@@ -1,38 +1,41 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Boss Battle", layout="centered")
-st.title("🛡️ Island.io: Final Boss Fix")
+st.set_page_config(page_title="Island.io: Pro Edition", layout="centered")
+st.title("🏆 Island.io: Final Polish")
 
 if "char" not in st.session_state:
     st.session_state.char = None
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    if st.button("🔵 Assault (Balanced)"):
+    if st.button("🔵 Assault"):
         st.session_state.char = {"hp": 3, "speed": 4.6, "color": "#00a2e8", "name": "Assault"}
 with col2:
-    if st.button("🟢 Tank (Heavy HP)"):
+    if st.button("🟢 Tank"):
         st.session_state.char = {"hp": 6, "speed": 3.0, "color": "#2ecc71", "name": "Tank"}
 with col3:
-    if st.button("🟡 Scout (Super Fast)"):
+    if st.button("🟡 Scout"):
         st.session_state.char = {"hp": 2, "speed": 6.8, "color": "#f1c40f", "name": "Scout"}
 
 if not st.session_state.char:
-    st.info("Pilih karakter untuk menghadapi Raja!")
+    st.info("Pilih karakter untuk memulai!")
     st.stop()
 
 c = st.session_state.char
 
 game_html = f"""
 <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 2px solid #333;">
-    <h2 id="s" style="color:white; margin:0; font-family:Arial;">Skor: 0 | Nyawa: </h2>
+    <div style="display:flex; justify-content: space-around; color:white; font-family:Arial; font-weight:bold; margin-bottom:10px;">
+        <div id="ui-score">Skor: 0</div>
+        <div id="ui-hp">Nyawa: </div>
+    </div>
     <p id="p-info" style="color:#f1c40f; font-weight:bold; margin:5px 0; height:20px; font-family:Courier;"></p>
     <canvas id="c" width="600" height="400" style="background:#0a0a0a; cursor:crosshair; border-radius:5px;"></canvas>
 </div>
 
 <script>
-    const cv=document.getElementById("c"), ctx=cv.getContext("2d"), stB=document.getElementById("s"), pInf=document.getElementById("p-info");
+    const cv=document.getElementById("c"), ctx=cv.getContext("2d"), uiS=document.getElementById("ui-score"), uiH=document.getElementById("ui-hp"), pInf=document.getElementById("p-info");
     let sc=0, li={c['hp']}, go=false, ks={{}}, buls=[], ebuls=[], enms=[], wls=[], itms=[], pX=[], boss=null, sk=0;
     let ply={{x:300, y:200, s:12, inv:0, pw:null, pT:0, spd:{c['speed']}, col:'{c['color']}'}};
 
@@ -64,10 +67,21 @@ game_html = f"""
         }}
     }}
 
+    function spawnItem() {{
+        let ok = false, rx, ry;
+        while(!ok) {{
+            rx = Math.random()*540+30; ry = Math.random()*340+30;
+            if(!isCol(rx, ry, 15, wls)) ok = true;
+        }}
+        itms.push({{x:rx, y:ry, t:Math.random()<0.5?'speed':'triple'}});
+    }}
+
     function update() {{
         if(go) return; 
         if(sk>0) sk--;
-        if(enms.length < 4 && !boss) {{
+        
+        // Kroco tetap muncul walaupun ada Boss
+        if(enms.length < 5) {{
             let rx=Math.random()*560+20, ry=Math.random()*360+20;
             if(!isCol(rx,ry,15,wls) && Math.sqrt((rx-ply.x)**2+(ry-ply.y)**2)>150){{
                 let r=Math.random(), t=r<0.5?{{c:'#e74c3c',s:20,sp:1.5,h:5,sc:10}}:(r<0.8?{{c:'#2ecc71',s:15,sp:2.2,h:3,sc:15}}:{{c:'#9b59b6',s:30,sp:0.8,h:15,sc:25}});
@@ -75,37 +89,35 @@ game_html = f"""
             }}
         }}
 
-        // Player Move
+        // Player movement
         let curS = (ply.pw==='speed')?ply.spd*1.7:ply.spd, nx=ply.x, ny=ply.y;
         if(ks["KeyW"]) ny-=curS; if(ks["KeyS"]) ny+=curS; if(ks["KeyA"]) nx-=curS; if(ks["KeyD"]) nx+=curS;
         if(!isCol(nx,ny,ply.s,wls)){{ ply.x=Math.max(ply.s,Math.min(588,nx)); ply.y=Math.max(ply.s,Math.min(388,ny)); }}
         
         if(ply.inv>0) ply.inv--;
-        if(ply.pT>0) {{ ply.pT--; if(ply.pT<=0) ply.pw=null; }}
+        if(ply.pT>0) {{ 
+            ply.pT--; 
+            pInf.innerText = "BUFF: " + ply.pw.toUpperCase() + " (" + Math.ceil(ply.pT/60) + "s)";
+            if(ply.pT<=0) {{ ply.pw=null; pInf.innerText = ""; }}
+        }}
 
-        // BOSS LOGIC
+        // Boss logic
         if(boss){{
             let dx=ply.x-boss.x, dy=ply.y-boss.y, d=Math.sqrt(dx*dx+dy*dy);
             let vx=(dx/d)*boss.sp, vy=(dy/d)*boss.sp;
-            // Boss tidak menembus tembok
             if(!isCol(boss.x+vx, boss.y+vy, boss.s/2, wls)){{ boss.x+=vx; boss.y+=vy; }}
-
             boss.fT++; boss.sT++;
-            // Serangan Melingkar Raja
-            if(boss.fT > 90){{
-                for(let a=0; a<Math.PI*2; a+=0.5){{
-                    ebuls.push({{x:boss.x+boss.s/2, y:boss.y+boss.s/2, vx:Math.cos(a)*5, vy:Math.sin(a)*5}});
-                }}
-                boss.fT=0; sk=10;
+            if(boss.fT > 100){{
+                for(let a=0; a<Math.PI*2; a+=0.6) ebuls.push({{x:boss.x+boss.s/2, y:boss.y+boss.s/2, vx:Math.cos(a)*5, vy:Math.sin(a)*5}});
+                boss.fT=0;
             }}
-            // Skill Pelindung & Heal
-            if(boss.sT > 250){{
-                boss.sh=true; if(boss.h < boss.mH) boss.h += 0.3;
-                if(boss.sT > 400) {{ boss.sh=false; boss.sT=0; }}
+            if(boss.sT > 300){{
+                boss.sh=true; if(boss.h < boss.mH) boss.h += 0.2;
+                if(boss.sT > 450) {{ boss.sh=false; boss.sT=0; }}
             }}
         }}
 
-        // Kroco Move (Anti-Tembus Tembok)
+        // Collision Kroco & Player
         enms.forEach(e=>{{
             let dx=ply.x-e.x, dy=ply.y-e.y, d=Math.sqrt(dx*dx+dy*dy);
             let vx=(dx/d)*e.sp, vy=(dy/d)*e.sp;
@@ -113,23 +125,25 @@ game_html = f"""
             if(ply.inv<=0 && Math.sqrt((e.x-ply.x)**2+(e.y-ply.y)**2)<(e.s/2+ply.s)){{ li--; ply.inv=60; spawnExplosion(ply.x,ply.y,"#f00",20); if(li<=0) go=true; }}
         }});
 
-        // Peluru Player
+        // Projectiles
         buls.forEach((b,i)=>{{
             b.x+=b.vx; b.y+=b.vy;
-            if(isCol(b.x,b.y,4,wls) || b.x<0 || b.x>600) {{ buls.splice(i,1); return; }}
+            if(isCol(b.x,b.y,4,wls) || b.x<0 || b.x>600 || b.y<0 || b.y>400) {{ buls.splice(i,1); return; }}
             if(boss && b.x>boss.x && b.x<boss.x+boss.s && b.y>boss.y && b.y<boss.y+boss.s){{
-                if(!boss.sh){{ boss.h-=5; spawnExplosion(b.x,b.y,"#ffa500",5); if(boss.h<=0){{sc+=500; boss=null; spawnExplosion(300,200,"#ff0",50);}} }}
+                if(!boss.sh){{ boss.h-=5; spawnExplosion(b.x,b.y,"#ffa500",5); if(boss.h<=0){{sc+=1000; boss=null;}} }}
                 buls.splice(i,1); return;
             }}
             enms.forEach((e,ei)=>{{
                 if(b.x>e.x && b.x<e.x+e.s && b.y>e.y && b.y<e.y+e.s){{
-                    e.h-=5; buls.splice(i,1); spawnExplosion(b.x,b.y,e.c,10);
-                    if(e.h<=0){{ sc+=e.sc; enms.splice(ei,1); if(sc>=150 && !boss) boss={{x:300,y:50,s:60,h:400,mH:400,sp:0.7,fT:0,sT:0,sh:false}}; }}
+                    e.h-=5; buls.splice(i,1);
+                    if(e.h<=0){{ 
+                        sc+=e.sc; spawnExplosion(e.x+e.s/2, e.y+e.s/2, e.c, 20); enms.splice(ei,1); 
+                        if(sc >= 500 && !boss) boss={{x:300,y:50,s:60,h:500,mH:500,sp:0.7,fT:0,sT:0,sh:false}};
+                    }}
                 }}
             }});
         }});
 
-        // Peluru Musuh/Boss
         ebuls.forEach((eb,i)=>{{
             eb.x+=eb.vx; eb.y+=eb.vy;
             if(Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s && ply.inv<=0){{ li--; ply.inv=60; ebuls.splice(i,1); if(li<=0) go=true; }}
@@ -138,6 +152,11 @@ game_html = f"""
 
         itms.forEach((it,i)=>{{ if(Math.sqrt((it.x-ply.x)**2+(it.y-ply.y)**2)<25){{ ply.pw=it.t; ply.pT=450; itms.splice(i,1); }} }});
         pX.forEach((p,i)=>{{ p.x+=p.vx; p.y+=p.vy; p.life--; if(p.life<=0) pX.splice(i,1); }});
+
+        // Update UI
+        uiS.innerText = "Skor: " + sc;
+        let hText = ""; for(let i=0; i<li; i++) hText += "❤️";
+        uiH.innerText = "Nyawa: " + hText;
     }}
 
     function draw() {{
@@ -146,15 +165,12 @@ game_html = f"""
         ctx.fillStyle="#444"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
         itms.forEach(it=>{{ ctx.fillStyle=it.t==='speed'?"#f1c40f":"#3498db"; ctx.beginPath(); ctx.arc(it.x,it.y,10,0,7); ctx.fill(); }});
         enms.forEach(e=>{{ ctx.fillStyle=e.c; ctx.fillRect(e.x,e.y,e.s,e.s); }});
-        
         if(boss){{
-            if(boss.sh){{ ctx.strokeStyle="#0f0"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(boss.x+boss.s/2,boss.y+boss.s/2,boss.s/0.8,0,7); ctx.stroke(); }}
+            if(boss.sh){{ ctx.strokeStyle="#0f0"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(boss.x+boss.s/2,boss.y+boss.s/2,50,0,7); ctx.stroke(); }}
             ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s);
-            // Health Bar Raja
             ctx.fillStyle="#333"; ctx.fillRect(boss.x, boss.y-15, boss.s, 8);
             ctx.fillStyle="#f00"; ctx.fillRect(boss.x, boss.y-15, (boss.h/boss.mH)*boss.s, 8);
         }}
-
         ctx.fillStyle="#f1c40f"; buls.forEach(b=>{{ ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill(); }});
         ctx.fillStyle="#ff4757"; ebuls.forEach(eb=>{{ ctx.beginPath(); ctx.arc(eb.x,eb.y,6,0,7); ctx.fill(); }});
         pX.forEach(p=>{{ ctx.fillStyle=p.col; ctx.globalAlpha=p.life/20; ctx.fillRect(p.x,p.y,p.s,p.s); }});
@@ -166,8 +182,7 @@ game_html = f"""
     }}
 
     initMap();
-    setInterval(()=>{{ if(itms.length<2) itms.push({{x:Math.random()*540+30,y:Math.random()*340+30,t:Math.random()<0.5?'speed':'triple'}}); }}, 7000);
-    stB.innerHTML = "Skor: 0 | Nyawa: ";
+    setInterval(spawnItem, 6000);
     draw();
 </script>
 """

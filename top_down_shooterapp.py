@@ -34,4 +34,61 @@ game_html = """
             }
         }
     }
-    function spB(){boss={x:270,y:50,s:60,h:20,mH:20
+    function spB(){boss={x:270,y:50,s:60,h:20,mH:20,dx:2,fT:0}; enms=[];}
+    function spI(){let t=Math.random()<0.5?'speed':'triple',rx=Math.random()*500+50,ry=Math.random()*300+50; if(!col(rx,ry,10,wls)) itms.push({x:rx,y:ry,t:t});}
+
+    function init(){
+        wls=[]; for(let i=0;i<5;i++){let w=Math.random()*80+40,h=Math.random()*80+40,x=Math.random()*500+50,y=Math.random()*300+50; if(!(x<350&&x+w>250&&y<250&&y+h>150)) wls.push({x,y,w,h});}
+        for(let i=0;i<4;i++) spE(); setInterval(spI,8000);
+    }
+
+    function upd(){
+        if(isGO) return; let curS=ply.pwr==='speed'?7:4, nx=ply.x, ny=ply.y;
+        if(ks["KeyW"]) ny-=curS; if(ks["KeyS"]) ny+=curS; if(ks["KeyA"]) nx-=curS; if(ks["KeyD"]) nx+=curS;
+        if(!col(nx,ny,ply.s,wls)){ply.x=Math.max(ply.s,Math.min(588,nx)); ply.y=Math.max(ply.s,Math.min(388,ny));}
+        if(ply.inv>0) ply.inv--; if(ply.pT>0 && --ply.pT<=0) ply.pwr=null;
+        
+        itms.forEach((it,i)=>{if(Math.sqrt((it.x-ply.x)**2+(it.y-ply.y)**2)<25){ply.pwr=it.t; ply.pT=300; itms.splice(i,1);}});
+        buls.forEach((b,i)=>{
+            b.x+=b.vx; b.y+=b.vy; if(col(b.x,b.y,2,wls)||b.x<0||b.x>600||b.y<0||b.y>400){buls.splice(i,1); return;}
+            if(boss&&b.x>boss.x&&b.x<boss.x+boss.s&&b.y>boss.y&&b.y<boss.y+boss.s){boss.h--; buls.splice(i,1); if(boss.h<=0){sc+=100; boss=null; for(let j=0;j<4;j++) spE();}}
+            enms.forEach((e,ei)=>{if(b.x>e.x&&b.x<e.x+e.s&&b.y>e.y&&b.y<e.y+e.s){e.h--; buls.splice(i,1); if(e.h<=0){sc+=e.sc; enms.splice(ei,1); if(sc%100===0&&sc>0) spB(); else spE();}}});
+        });
+
+        ebuls.forEach((eb,i)=>{eb.x+=eb.vx; eb.y+=eb.vy; if(eb.x<0||eb.x>600||eb.y<0||eb.y>400) ebuls.splice(i,1); if(ply.inv<=0&&Math.sqrt((eb.x-ply.x)**2+(eb.y-ply.y)**2)<ply.s){li--; ply.inv=60; ebuls.splice(i,1);}});
+
+        if(boss){
+            boss.x+=boss.dx; if(boss.x<0||boss.x>600-boss.s) boss.dx*=-1;
+            if(++boss.fT>60){let a=Math.atan2(ply.y-boss.y,ply.x-boss.x); ebuls.push({x:boss.x+30,y:boss.y+30,vx:Math.cos(a)*5,vy:Math.sin(a)*5}); boss.fT=0;}
+            if(ply.inv<=0&&ply.x>boss.x&&ply.x<boss.x+boss.s&&ply.y>boss.y&&ply.y<boss.y+boss.s){li--; ply.inv=60;}
+        }
+
+        enms.forEach(e=>{
+            let dx=ply.x-e.x, dy=ply.y-e.y, d=Math.sqrt(dx*dx+dy*dy);
+            if(e.m==='sk'){
+                let vx=(dx/d)*e.sp, vy=(dy/d)*e.sp;
+                if(!col(e.x+vx+10,e.y+vy+10,10,wls)){e.x+=vx; e.y+=vy;} else {e.m='av'; e.tT=40; e.d=Math.abs(dx)>Math.abs(dy)?{x:0,y:dy>0?e.sp:-e.sp}:{x:dx>0?e.sp:-e.sp,y:0};}
+            } else {
+                if(!col(e.x+e.d.x+10,e.y+e.d.y+10,10,wls)){e.x+=e.d.x; e.y+=e.d.y;} else {e.d.x*=-1; e.d.y*=-1;}
+                if(--e.tT<=0) e.m='sk';
+            }
+            if(ply.inv<=0&&Math.sqrt((e.x+e.s/2-ply.x)**2+(e.y+e.s/2-ply.y)**2)<(e.s/2+ply.s)){li--; ply.inv=60;}
+        });
+        if(li<=0){isGO=true; gOS.style.display="block";}
+        stB.innerText=`Skor: ${sc} | Nyawa: ${"❤️".repeat(li)} ${ply.pwr?'| POWER: '+ply.pwr.toUpperCase():''}`;
+    }
+
+    function drw(){
+        ctx.clearRect(0,0,600,400); ctx.fillStyle="#333"; wls.forEach(w=>ctx.fillRect(w.x,w.y,w.w,w.h));
+        itms.forEach(it=>{ctx.fillStyle=it.t==='speed'?"#f1c40f":"#3498db"; ctx.beginPath(); ctx.arc(it.x,it.y,8,0,7); ctx.fill();});
+        enms.forEach(e=>{ctx.fillStyle=e.c; ctx.fillRect(e.x,e.y,e.s,e.s);});
+        if(boss){ctx.fillStyle="#e74c3c"; ctx.fillRect(boss.x,boss.y,boss.s,boss.s); ctx.fillStyle="white"; ctx.fillRect(boss.x,boss.y-10,(boss.h/boss.mH)*boss.s,5);}
+        ctx.fillStyle="#f39c12"; buls.forEach(b=>{ctx.beginPath(); ctx.arc(b.x,b.y,4,0,7); ctx.fill();});
+        ctx.fillStyle="red"; ebuls.forEach(eb=>{ctx.beginPath(); ctx.arc(eb.x,eb.y,5,0,7); ctx.fill();});
+        if(ply.inv%10<5){ctx.fillStyle="#00a2e8"; ctx.beginPath(); ctx.arc(ply.x,ply.y,ply.s,0,7); ctx.fill();}
+        upd(); requestAnimationFrame(drw);
+    }
+    init(); drw();
+</script>
+"""
+components.html(game_html, height=580)

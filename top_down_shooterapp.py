@@ -12,14 +12,14 @@ st.write("### Pilih Hero Anda:")
 c1, c2, c3 = st.columns(3)
 c4, c5, c6 = st.columns(3)
 
-# Definisi Data Karakter sesuai permintaan
+# Definisi Data Karakter - Kecepatan diset ke 7 sesuai permintaan
 classes_data = [
-    {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 4.5, "t": "assault", "slot": c1},
-    {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 2.8, "t": "tank", "slot": c2},
-    {"n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 6.5, "t": "scout", "slot": c3},
-    {"n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 4.5, "t": "joker", "slot": c4},
-    {"n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 4.0, "t": "bomber", "slot": c5},
-    {"n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 4.5, "t": "roket", "slot": c6}
+    {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 7, "t": "assault", "slot": c1},
+    {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 7, "t": "tank", "slot": c2},
+    {"n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 7, "t": "scout", "slot": c3},
+    {"n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 7, "t": "joker", "slot": c4},
+    {"n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 7, "t": "bomber", "slot": c5},
+    {"n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 7, "t": "roket", "slot": c6}
 ]
 
 for cls in classes_data:
@@ -31,7 +31,6 @@ if not st.session_state.char:
     st.info("Pilih Class untuk bertarung!")
     st.stop()
 
-# Masukkan logika game ke HTML/JavaScript
 p = st.session_state.char
 game_html = f"""
 <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 4px solid #444; position:relative; font-family: sans-serif; user-select: none;">
@@ -47,7 +46,6 @@ game_html = f"""
             <div id="skill-bar" style="width:0%; height:100%; background: {p['col']}; box-shadow: 0 0 10px {p['col']};"></div>
         </div>
     </div>
-    <div id="buff-ui" style="color:#f1c40f; font-size:12px; font-weight:bold; min-height:15px; margin-bottom:5px;"></div>
 
     <canvas id="g" width="600" height="400" style="background:#050505; border: 2px solid #333; border-radius:5px; cursor: crosshair;"></canvas>
 </div>
@@ -56,10 +54,11 @@ game_html = f"""
 (function() {{
     const canvas = document.getElementById('g'), ctx = canvas.getContext('2d');
     const uScore = document.getElementById('ui-score'), uHP = document.getElementById('ui-hp'),
-          uBar = document.getElementById('skill-bar'), uBuff = document.getElementById('buff-ui');
+          uBar = document.getElementById('skill-bar');
 
     let score = 0, health = {p['hp']}, level = 1, gameOver = false;
-    let keys = {{}}, bullets = [], enemies = [], walls = [], particles = [], boss = null;
+    let keys = {{}}, bullets = [], enemies = [], particles = [], boss = null;
+    let lastFireTime = 0; // Untuk cooldown peluru 250ms
     
     let player = {{
         x: 300, y: 200, r: 12, speed: {p['spd']},
@@ -87,7 +86,6 @@ game_html = f"""
     function useUlt(forcedType = null) {{
         let type = forcedType || player.type;
         if(!forcedType && (player.sT < player.sM || gameOver)) return;
-        
         if(!forcedType) {{ player.sT = 0; player.kills = 0; }}
 
         if(type === 'tank') {{
@@ -103,14 +101,12 @@ game_html = f"""
         else if(type === 'scout') {{
             let a = Math.atan2(my-player.y, mx-player.x);
             player.x += Math.cos(a)*150; player.y += Math.sin(a)*150;
-            player.inv = 180; // 3s Imun
+            player.inv = 180;
             spawnExplosion(player.x, player.y, player.color);
         }}
         else if(type === 'bomber') {{
             spawnExplosion(player.x, player.y, "#ffff00", 60);
-            enemies.forEach(e => {{
-                if(Math.hypot(e.x-player.x, e.y-player.y) < 180) e.hp -= 200;
-            }});
+            enemies.forEach(e => {{ if(Math.hypot(e.x-player.x, e.y-player.y) < 180) e.hp -= 200; }});
             if(boss && Math.hypot((boss.x+40)-player.x, (boss.y+40)-player.y) < 180) boss.hp -= 500;
         }}
         else if(type === 'roket') {{
@@ -130,19 +126,29 @@ game_html = f"""
 
     canvas.onmousedown = () => {{
         if(gameOver) return;
-        fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), false, true);
+        let now = Date.now();
+        if(now - lastFireTime > 250) {{ // Cooldown Tembakan 250ms
+            fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), false, true);
+            lastFireTime = now;
+        }}
     }};
 
     function fire(x, y, a, isRocket, isPlayer) {{
-        // Offset peluru agar tidak kena badan sendiri
-        let ox = x + Math.cos(a) * 20;
-        let oy = y + Math.sin(a) * 20;
-        bullets.push({{ x:ox, y:oy, vx: Math.cos(a)*(isRocket?12:9), vy: Math.sin(a)*(isRocket?12:9), r: isRocket?8:4, c: isPlayer?player.color:'#F00', p: isPlayer, rk: isRocket }});
+        let ox = x + Math.cos(a) * 22; // Offset agar tidak macet
+        let oy = y + Math.sin(a) * 22;
+        // Peluru player jadi warna Putih (#FFF)
+        bullets.push({{ 
+            x:ox, y:oy, 
+            vx: Math.cos(a)*(isRocket?12:9), 
+            vy: Math.sin(a)*(isRocket?12:9), 
+            r: isRocket?8:4, 
+            c: isPlayer?'#FFFFFF':'#FF0000', 
+            p: isPlayer, rk: isRocket 
+        }});
     }}
 
     function update() {{
         if(gameOver) return;
-        
         let s = player.speed;
         let nx=player.x, ny=player.y;
         if(keys['KeyW']) ny-=s; if(keys['KeyS']) ny+=s;
@@ -150,7 +156,6 @@ game_html = f"""
         if(nx > 0 && nx < 600) player.x=nx;
         if(ny > 0 && ny < 400) player.y=ny;
 
-        // Ulti Charge Logic
         if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
         else if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100/(10*60)));
         else if(player.type === 'roket') player.sT = (player.kills/10)*100;
@@ -165,20 +170,13 @@ game_html = f"""
                 b.vx = Math.cos(a)*10; b.vy = Math.sin(a)*10;
             }}
             b.x += b.vx; b.y += b.vy;
-            
             if(b.p) {{
                 for(let e of enemies) {{
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.rk?100:player.dmg;
-                        if(e.hp<=0) {{ 
-                            player.kills++; score += 10;
-                            enemies.splice(enemies.indexOf(e), 1); 
-                        }}
+                        if(e.hp<=0) {{ player.kills++; score += 10; enemies.splice(enemies.indexOf(e), 1); }}
                         return false;
                     }}
-                }}
-                if(boss && b.x > boss.x && b.x < boss.x+boss.w && b.y > boss.y && b.y < boss.y+boss.h) {{
-                    boss.hp -= player.dmg; return false;
                 }}
             }} else {{
                 if(Math.hypot(player.x-b.x, player.y-b.y) < player.r+b.r) {{
@@ -195,12 +193,7 @@ game_html = f"""
             if(Math.hypot(player.x-e.x, player.y-e.y) < player.r+e.s/2 && player.inv<=0 && !player.shield) triggerRespawn();
         }});
 
-        if(score >= 300 && !boss) boss = {{x:250, y:50, w:80, h:80, hp:1000, mH:1000}};
-
-        if(enemies.length < 6) {{
-            enemies.push({{x:Math.random()*600, y:Math.random()*400, s:20, sp:1.2, hp:10}});
-        }}
-
+        if(enemies.length < 6) enemies.push({{x:Math.random()*600, y:Math.random()*400, s:20, sp:1.2, hp:10}});
         particles.forEach((p,i)=>{{ p.x+=p.vx; p.y+=p.vy; p.life--; if(p.life<=0) particles.splice(i,1); }});
         if(player.inv > 0) player.inv--;
         uScore.innerText = "Skor: " + score;
@@ -209,15 +202,14 @@ game_html = f"""
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
-        bullets.forEach(b => {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }});
+        bullets.forEach(b => {{ 
+            ctx.shadowBlur = 10; ctx.shadowColor = b.c;
+            ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); 
+            ctx.shadowBlur = 0;
+        }});
         enemies.forEach(e => {{ ctx.fillStyle='#e74c3c'; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); }});
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
-        if(boss) {{
-            ctx.fillStyle='#ff4d4d'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
-            ctx.fillStyle='#f00'; ctx.fillRect(boss.x, boss.y-12, (boss.hp/boss.mH)*boss.w, 8);
-        }}
         
-        // Draw Arrow Player
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x);
             ctx.save();

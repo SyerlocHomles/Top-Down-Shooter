@@ -8,7 +8,7 @@ if "char" not in st.session_state:
     st.session_state.char = None
 
 cols = st.columns(3)
-# Kecepatan disetel ke 7.5 (representasi 7/10) agar terasa lincah namun terkontrol
+# Kecepatan disetel ke 7.5 (representasi 7/10) agar terasa lincah
 classes = [
     ("🔵 Assault", "#00a2e8", 3, 7.5, "assault"),
     ("🟢 Tank", "#2ecc71", 6, 7.5, "tank"),
@@ -25,6 +25,7 @@ if not st.session_state.char:
     st.stop()
 
 p_data = st.session_state.char
+# Perhatikan penggunaan double bracket {{ }} untuk bagian CSS/JS literal agar tidak error di f-string
 game_html = f"""
 <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 4px solid #444; position:relative; font-family: sans-serif; user-select: none;">
     <div style="display:flex; justify-content: space-between; color:white; font-weight:bold; margin-bottom: 10px;">
@@ -60,7 +61,7 @@ game_html = f"""
 
     let score = 0, health = {p_data['hp']}, level = 1, gameOver = false;
     let keys = {{}}, bullets = [], enemies = [], walls = [], items = [], particles = [], boss = null;
-    let lastFireTime = 0; // Untuk jeda tembak 250ms
+    let lastFireTime = 0; 
     
     let player = {{
         x: 300, y: 200, r: 12, speed: {p_data['spd']},
@@ -137,7 +138,7 @@ game_html = f"""
     canvas.onmousedown = () => {{
         if(gameOver || uMenu.style.display === 'block') return;
         let now = Date.now();
-        if(now - lastFireTime > 250) {{ // JEDA TEMBAK 250ms
+        if(now - lastFireTime > 250) {{
             let a = Math.atan2(my-player.y, mx-player.x);
             fire(player.x, player.y, a, false, true);
             if(player.buffs.triple > 0) {{ fire(player.x, player.y, a+0.25, false, true); fire(player.x, player.y, a-0.25, false, true); }}
@@ -146,7 +147,6 @@ game_html = f"""
     }};
 
     function fire(x, y, a, isRocket, isPlayer) {{
-        // Kecepatan peluru ditingkatkan menjadi 14-18 agar terasa impact-nya
         bullets.push({{ 
             x, y, 
             vx: Math.cos(a)*(isRocket?18:14), 
@@ -185,7 +185,7 @@ game_html = f"""
                         if(e.hp<=0) {{ 
                             if(player.type === 'assault') player.sT = Math.min(100, player.sT + 10);
                             if(player.type === 'scout') player.sT = Math.min(100, player.sT + 5); 
-                            if(!boss) score += (e.color==='#9b59b6'?10 : e.color==='#e74c3c'?5 : 3);
+                            if(!boss) score += (e.color==='#e74c3c'?5 : e.color==='#9b59b6'?10 : 3);
                             enemies.splice(enemies.indexOf(e), 1); 
                         }}
                         return false;
@@ -224,7 +224,7 @@ game_html = f"""
             boss.fT++;
             if(boss.fT > 100) {{ fire(boss.x+boss.w/2, boss.y+boss.h/2, a, false, false); boss.fT = 0; }}
             if(boss.hp <= 0) {{ boss=null; uMenu.style.display='block'; }}
-        }
+        }}
 
         if(enemies.length < 5) {{
             let ex, ey, dist;

@@ -1,17 +1,18 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Boss Lockdown", layout="centered")
-st.title("⚔️ Island.io: Boss Battle 500")
+st.set_page_config(page_title="Island.io: Glow Arrow", layout="centered")
+st.title("⚔️ Island.io: Arrow Glow Edition")
 
 if "char" not in st.session_state:
     st.session_state.char = None
 
 cols = st.columns(3)
+# Warna class tetap dipertahankan untuk identitas, namun karakter akan di-render dengan glow putih
 classes = [
-    ("🔵 Assault (Kill Charge)", "#00a2e8", 3, 4.5, "assault"),
-    ("🟢 Tank (10s CD)", "#2ecc71", 6, 3.0, "tank"),
-    ("🟡 Scout (20s CD)", "#f1c40f", 2, 6.8, "scout")
+    ("🔵 Assault", "#00a2e8", 3, 4.5, "assault"),
+    ("🟢 Tank", "#2ecc71", 6, 3.0, "tank"),
+    ("🟡 Scout", "#f1c40f", 2, 6.8, "scout")
 ]
 
 for i, (name, col, hp, spd, t) in enumerate(classes):
@@ -20,7 +21,7 @@ for i, (name, col, hp, spd, t) in enumerate(classes):
             st.session_state.char = {"hp": hp, "spd": spd, "col": col, "type": t}
 
 if not st.session_state.char:
-    st.info("Pilih Class untuk bertarung!")
+    st.info("Pilih Class untuk bertarung! Bentuk karakter sekarang berbentuk Arrow Glow.")
     st.stop()
 
 game_html = f"""
@@ -61,7 +62,7 @@ game_html = f"""
     
     let player = {{
         x: 300, y: 200, r: 12, speed: {st.session_state.char['spd']},
-        type: '{st.session_state.char['type']}', color: '{st.session_state.char['col']}',
+        type: '{st.session_state.char['type']}', color: '#FFFFFF', // Warna Putih
         sT: 0, sM: 100, shield: false,
         buffs: {{ speed: 0, triple: 0 }},
         dmg: 5, inv: 0
@@ -108,7 +109,7 @@ game_html = f"""
     function triggerRespawn() {{
         health--;
         spawnExplosion(player.x, player.y, "#ffffff");
-        player.inv = 180; // 3s kebal
+        player.inv = 180;
         if(health <= 0) gameOver = true;
     }}
 
@@ -152,7 +153,6 @@ game_html = f"""
         if(!isInsideWall(nx, player.y, player.r)) player.x=nx;
         if(!isInsideWall(player.x, ny, player.r)) player.y=ny;
 
-        // Ultimate Recharge
         if(player.type === 'tank') player.sT = Math.min(100, player.sT + (100/(10*60)));
         if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100/(20*60)));
         uBar.style.width = Math.min(100, player.sT) + '%';
@@ -171,8 +171,6 @@ game_html = f"""
                         if(e.hp<=0) {{ 
                             if(player.type === 'assault') player.sT = Math.min(100, player.sT + 10);
                             if(player.type === 'scout') player.sT = Math.min(100, player.sT + 5); 
-                            
-                            // LOGIC 14: Selama boss ada, poin tidak bertambah
                             if(!boss) {{
                                 if(e.color==='#9b59b6') score+=10;
                                 else if(e.color==='#e74c3c') score+=5;
@@ -207,7 +205,6 @@ game_html = f"""
             if(Math.hypot(player.x-e.x, player.y-e.y) < player.r+e.s/2 && player.inv<=0 && !player.shield) triggerRespawn();
         }});
 
-        // FIXED LOGIC: Boss muncul di skor 500
         if(score >= 500 && !boss) {{
             boss = {{x:250, y:50, w:80, h:80, hp:800*level, mH:800*level, fT:0}};
             spawnExplosion(300, 200, "#ff0000");
@@ -260,17 +257,52 @@ game_html = f"""
         ctx.clearRect(0,0,600,400);
         walls.forEach(w => {{ ctx.fillStyle='#444'; ctx.fillRect(w.x, w.y, w.w, w.h); }});
         items.forEach(it => {{ ctx.fillStyle=it.t==='speed'?'#3498db':'#f1c40f'; ctx.beginPath(); ctx.arc(it.x,it.y,10,0,7); ctx.fill(); }});
-        bullets.forEach(b => {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }});
+        
+        // Draw Bullets with slight glow
+        bullets.forEach(b => {{ 
+            ctx.shadowBlur = 8; ctx.shadowColor = b.c;
+            ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); 
+            ctx.shadowBlur = 0;
+        }});
+
         enemies.forEach(e => {{ ctx.fillStyle=e.color; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); }});
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
+        
         if(boss) {{
             ctx.fillStyle='#ff4d4d'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x, boss.y-12, (boss.hp/boss.mH)*boss.w, 8);
         }}
+
+        // DRAW CHARACTER AS ARROW (>) WITH GLOW
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
-            ctx.fillStyle=player.color; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,7); ctx.fill();
-            if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(player.x,player.y,player.r+8,0,7); ctx.stroke(); }}
+            let angle = Math.atan2(my - player.y, mx - player.x);
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(angle);
+            
+            // Neon Glow Effect
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.fillStyle = player.color;
+            
+            // Draw Arrow Shape
+            ctx.beginPath();
+            ctx.moveTo(15, 0);      // Tip
+            ctx.lineTo(-10, -10);   // Bottom back
+            ctx.lineTo(-5, 0);      // Notch
+            ctx.lineTo(-10, 10);    // Top back
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+
+            if(player.shield) {{ 
+                ctx.shadowBlur = 20; ctx.shadowColor = '#00e5ff';
+                ctx.strokeStyle='#00e5ff'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(player.x,player.y,player.r+12,0,7); ctx.stroke(); 
+                ctx.shadowBlur = 0;
+            }}
         }}
+
         if(gameOver) {{ ctx.fillStyle='white'; ctx.font='40px Arial'; ctx.textAlign='center'; ctx.fillText("GAME OVER", 300, 200); }}
     }}
 

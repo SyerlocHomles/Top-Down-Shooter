@@ -100,8 +100,11 @@ game_html = f"""
         if(type === 'tank') {{
             player.shield = true;
             let shots = 0;
+            // Ulti Tank: 3 gelombang tembakan memutar dengan damage tinggi (80 per peluru)
             let interval = setInterval(() => {{
-                for(let a=0; a<Math.PI*2; a+=Math.PI/6) fire(player.x, player.y, a, false, true);
+                for(let a=0; a<Math.PI*2; a+=Math.PI/6) {{
+                    fire(player.x, player.y, a, false, true, 80); 
+                }}
                 shots++;
                 if(shots >= 3) clearInterval(interval);
             }}, 500);
@@ -123,11 +126,11 @@ game_html = f"""
         else if(type === 'roket') {{
             for(let i=0; i<5; i++) {{
                 let target = boss || (enemies.length > 0 ? enemies[Math.floor(Math.random()*enemies.length)] : null);
-                bullets.push({{ x: player.x, y: player.y, vx: 0, vy: 0, r: 8, c: '#ff0000', p: true, rk: true, target: target, life: 200 }});
+                bullets.push({{ x: player.x, y: player.y, vx: 0, vy: 0, r: 8, c: '#ff0000', p: true, rk: true, target: target, life: 200, d: 100 }});
             }}
         }}
         else if(type === 'assault') {{
-            for(let i=0; i<15; i++) setTimeout(()=>fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), true, true), i*80);
+            for(let i=0; i<15; i++) setTimeout(()=>fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), true, true, 40), i*80);
         }}
         else if(type === 'joker') {{
             const pool = ['tank', 'scout', 'bomber', 'roket', 'assault'];
@@ -137,13 +140,22 @@ game_html = f"""
 
     canvas.onmousedown = () => {{
         if(gameOver) return;
-        fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), false, true);
+        fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), false, true, player.dmg);
     }};
 
-    function fire(x, y, a, isRocket, isPlayer) {{
+    function fire(x, y, a, isSpecial, isPlayer, damageValue) {{
         let ox = x + Math.cos(a) * 20;
         let oy = y + Math.sin(a) * 20;
-        bullets.push({{ x:ox, y:oy, vx: Math.cos(a)*(isRocket?18:15), vy: Math.sin(a)*(isRocket?18:15), r: isRocket?8:4, c: isPlayer?player.color:'#F00', p: isPlayer, rk: isRocket }});
+        bullets.push({{ 
+            x:ox, y:oy, 
+            vx: Math.cos(a)*(isSpecial?18:15), 
+            vy: Math.sin(a)*(isSpecial?18:15), 
+            r: isSpecial?8:4, 
+            c: isPlayer?player.color:'#F00', 
+            p: isPlayer, 
+            rk: isSpecial,
+            d: damageValue || player.dmg
+        }});
     }}
 
     function update() {{
@@ -177,7 +189,7 @@ game_html = f"""
                 // Check Boss Collision
                 if(boss && Math.hypot(boss.x-b.x, boss.y-b.y) < boss.s) {{
                     if(!boss.shieldActive) {{
-                        boss.hp -= b.rk?100:player.dmg;
+                        boss.hp -= b.d; // Menggunakan damage dari object bullet
                         if(boss.hp <= 0) {{
                             spawnExplosion(boss.x, boss.y, boss.c, 100);
                             score += 500;
@@ -191,7 +203,7 @@ game_html = f"""
                 for(let i=enemies.length-1; i>=0; i--) {{
                     let e = enemies[i];
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
-                        e.hp -= b.rk?100:player.dmg;
+                        e.hp -= b.d;
                         if(e.hp<=0) {{ 
                             player.kills++; 
                             if(!boss) score += e.val;
@@ -224,25 +236,23 @@ game_html = f"""
             boss.x += Math.cos(a)*boss.sp; boss.y += Math.sin(a)*boss.sp;
             if(Math.hypot(player.x-boss.x, player.y-boss.y) < player.r+boss.s && player.inv<=0 && !player.shield) triggerRespawn();
             
-            // Boss Shield Skill Logic
             boss.nextShield--;
             if(boss.nextShield <= 0 && !boss.shieldActive) {{
                 boss.shieldActive = true;
-                boss.shieldTimer = 300; // 5 detik @60fps
+                boss.shieldTimer = 300; 
             }}
 
             if(boss.shieldActive) {{
                 boss.shieldTimer--;
-                boss.hp = Math.min(boss.mH, boss.hp + 0.5); // Regen HP
+                boss.hp = Math.min(boss.mH, boss.hp + 0.5); 
                 if(boss.shieldTimer <= 0) {{
                     boss.shieldActive = false;
-                    boss.nextShield = 600 + Math.random()*400; // Jeda antar shield
+                    boss.nextShield = 600 + Math.random()*400;
                 }}
             }}
 
-            // Boss Fire
             if(Math.random() < 0.02) {{
-                for(let i=0; i<3; i++) fire(boss.x, boss.y, a + (Math.random()-0.5), false, false);
+                for(let i=0; i<3; i++) fire(boss.x, boss.y, a + (Math.random()-0.5), false, false, 1);
             }}
         }}
 
@@ -301,7 +311,6 @@ game_html = f"""
                 ctx.fill();
             }}
             drawHexagon(boss.x, boss.y, boss.s, boss.c);
-            // Health bar boss
             ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 6);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 6);
         }}

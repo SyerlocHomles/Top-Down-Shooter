@@ -8,7 +8,6 @@ st.title("⚔️ Island.io: Roket Autolock Launcher")
 if "char" not in st.session_state:
     st.session_state.char = None
 
-# Fungsi untuk reset karakter
 def reset_game():
     st.session_state.char = None
     st.rerun()
@@ -52,6 +51,11 @@ game_html = f"""
         <div id="ui-hp">❤️❤️❤️</div>
     </div>
     
+    <div id="item-ui" style="position: absolute; left: 20px; bottom: 20px; text-align: left; pointer-events: none;">
+        <div id="energy-status" style="display:none; color:#4deaff; font-size:12px; font-weight:bold; margin-bottom:5px;">⚡ SPEED BOOST: <span id="energy-timer">0.0</span>s</div>
+        <div id="triple-status" style="display:none; color:#ffff4d; font-size:12px; font-weight:bold;">Ⅲ TRIPLE SHOT: <span id="triple-count">0</span></div>
+    </div>
+
     <div style="margin: 0 auto 10px; width: 250px;">
         <div id="ui-skill-text" style="color:{p['col']}; font-size: 11px; font-weight:bold; text-transform: uppercase;">{p['type']} ULTIMATE</div>
         <div style="width:100%; height:12px; background:#333; border-radius:6px; overflow:hidden; border: 1px solid #555;">
@@ -73,6 +77,8 @@ game_html = f"""
     const canvas = document.getElementById('g'), ctx = canvas.getContext('2d');
     const uScore = document.getElementById('ui-score'), uHP = document.getElementById('ui-hp'),
           uBar = document.getElementById('skill-bar'), uLvl = document.getElementById('ui-lvl');
+    const energyUI = document.getElementById('energy-status'), energyTimer = document.getElementById('energy-timer');
+    const tripleUI = document.getElementById('triple-status'), tripleCount = document.getElementById('triple-count');
     const rBtn = document.getElementById('restart-btn');
 
     let score = 0, health = {p['hp']}, gameOver = false;
@@ -83,7 +89,8 @@ game_html = f"""
         x: 300, y: 200, r: 12, speed: {p['spd']}, baseSpeed: {p['spd']},
         type: '{p['type']}', color: '{p['col']}',
         sT: 0, sM: 100, shield: false,
-        dmg: 5, inv: 0, kills: 0, tripleShot: 0
+        dmg: 5, inv: 0, kills: 0, 
+        tripleShot: 0, energyTime: 0 // Tambahan Status Item
     }};
 
     function spawnExplosion(x, y, color, count=15) {{
@@ -94,7 +101,7 @@ game_html = f"""
 
     function spawnItem(x, y) {{
         let r = Math.random();
-        if(r < 0.15) {{ // 15% chance drop
+        if(r < 0.25) {{ // Dinaikkan ke 25% agar lebih terasa pengetesannya
             let type = Math.random();
             if(type < 0.3) items.push({{ x, y, type: 'medkit', c: '#ff4d4d', label: '✚' }});
             else if(type < 0.6) items.push({{ x, y, type: 'energy', c: '#4deaff', label: '⚡' }});
@@ -184,6 +191,26 @@ game_html = f"""
 
     function update() {{
         if(gameOver) return;
+        
+        // Update Energy Item Duration
+        if(player.energyTime > 0) {{
+            player.energyTime--;
+            player.speed = player.baseSpeed * 1.5;
+            energyUI.style.display = "block";
+            energyTimer.innerText = (player.energyTime / 60).toFixed(1);
+        }} else {{
+            player.speed = player.baseSpeed;
+            energyUI.style.display = "none";
+        }}
+
+        // Update Triple Shot UI
+        if(player.tripleShot > 0) {{
+            tripleUI.style.display = "block";
+            tripleCount.innerText = player.tripleShot;
+        }} else {{
+            tripleUI.style.display = "none";
+        }}
+
         let s = player.speed, nx=player.x, ny=player.y;
         if(keys['KeyW']) ny-=s; if(keys['KeyS']) ny+=s;
         if(keys['KeyA']) nx-=s; if(keys['KeyD']) nx+=s;
@@ -204,10 +231,7 @@ game_html = f"""
             let it = items[i];
             if(Math.hypot(player.x-it.x, player.y-it.y) < player.r + 15) {{
                 if(it.type === 'medkit') health = Math.min(health + 1, 10);
-                else if(it.type === 'energy') {{ 
-                    player.speed = player.baseSpeed * 1.5; 
-                    setTimeout(() => player.speed = player.baseSpeed, 5000); 
-                }}
+                else if(it.type === 'energy') player.energyTime += 300; // +5 detik (60fps * 5)
                 else if(it.type === 'triple') player.tripleShot += 20;
                 items.splice(i, 1);
             }}
@@ -271,7 +295,7 @@ game_html = f"""
     function draw() {{
         ctx.clearRect(0,0,600,400);
         
-        // Draw Items
+        // Draw Items on Ground
         items.forEach(it => {{
             ctx.fillStyle = it.c; ctx.beginPath(); ctx.arc(it.x, it.y, 10, 0, 7); ctx.fill();
             ctx.fillStyle = 'white'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
@@ -297,8 +321,17 @@ game_html = f"""
 
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
         
+        // DRAW PLAYER
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
+            // Item Active Aura (Lingkaran di kaki)
+            if(player.energyTime > 0) {{
+                ctx.strokeStyle = '#4deaff'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(player.x, player.y, 20, 0, (Math.PI*2) * (player.energyTime/300));
+                ctx.stroke();
+            }}
+
             let angle = Math.atan2(my - player.y, mx - player.x); ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.fillStyle = player.color; ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, -12); ctx.lineTo(-7, 0); ctx.lineTo(-12, 12); ctx.closePath(); ctx.fill(); ctx.restore();
+            
             if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(player.x,player.y,25,0,7); ctx.stroke(); }}
         }}
         if(gameOver) {{ ctx.fillStyle='white'; ctx.font='40px Arial'; ctx.textAlign='center'; ctx.fillText("GAME OVER", 300, 200); }}

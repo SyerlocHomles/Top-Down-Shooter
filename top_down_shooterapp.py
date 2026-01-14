@@ -1,8 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: 6 Classes", layout="centered")
-st.title("⚔️ Island.io: Arrow Glow - 6 Classes")
+st.set_page_config(page_title="Island.io: Roket Launcher", layout="centered")
+st.title("⚔️ Island.io: Roket Autolock Launcher")
 
 if "char" not in st.session_state:
     st.session_state.char = None
@@ -115,16 +115,19 @@ game_html = f"""
         }}
         else if(type === 'bomber') {{
             spawnExplosion(player.x, player.y, "#ffff00", 60);
-            enemies.forEach(e => {{
-                if(Math.hypot(e.x-player.x, e.y-player.y) < 180) e.hp -= 200;
-            }});
+            enemies.forEach(e => {{ if(Math.hypot(e.x-player.x, e.y-player.y) < 180) e.hp -= 200; }});
             if(boss && !boss.shieldActive && Math.hypot(boss.x-player.x, boss.y-player.y) < 200) boss.hp -= 300;
         }}
         else if(type === 'roket') {{
-            for(let i=0; i<5; i++) {{
-                let target = boss || (enemies.length > 0 ? enemies[Math.floor(Math.random()*enemies.length)] : null);
-                // Roket dibuat dengan rk: true agar digambar sebagai panah >
-                bullets.push({{ x: player.x, y: player.y, vx: 0, vy: 0, r: 10, c: '#ffa500', p: true, rk: true, target: target, life: 250, d: 150 }});
+            for(let i=0; i<6; i++) {{
+                // Launcher effect: Peluru muncul berpencar sedikit sebelum autolock
+                let startAngle = (Math.PI * 2 / 6) * i;
+                bullets.push({{ 
+                    x: player.x, y: player.y, 
+                    vx: Math.cos(startAngle)*5, vy: Math.sin(startAngle)*5, 
+                    r: 10, c: '#ffa500', p: true, rk: true, 
+                    target: null, life: 300, d: 150 
+                }});
             }}
         }}
         else if(type === 'assault') {{
@@ -151,7 +154,7 @@ game_html = f"""
             r: isSpecial?8:4, 
             c: isPlayer?player.color:'#F00', 
             p: isPlayer, 
-            rk: isSpecial,
+            rk: false,
             d: damageValue || player.dmg
         }});
     }}
@@ -166,43 +169,56 @@ game_html = f"""
         if(nx > 0 && nx < 600) player.x=nx;
         if(ny > 0 && ny < 400) player.y=ny;
 
+        // Skill Regen
         if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
         else if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100/(10*60)));
-        else if(player.type === 'roket') player.sT = (player.kills/10)*100;
+        else if(player.type === 'roket') player.sT = (player.kills/8)*100;
         else if(player.type === 'joker') player.sT = (player.kills/15)*100;
         else if(player.type === 'assault') player.sT = Math.min(100, player.sT + 0.1);
 
         uBar.style.width = Math.min(100, player.sT) + '%';
 
         bullets = bullets.filter(b => {{
-            if(b.rk && b.target && b.target.hp > 0) {{
-                let a = Math.atan2(b.target.y-b.y, b.target.x-b.x);
-                // Smooth homing
-                b.vx += Math.cos(a) * 0.8;
-                b.vy += Math.sin(a) * 0.8;
+            // ROKET AUTOLOCK LOGIC
+            if(b.rk) {{
+                // Cari target terdekat jika tidak ada target atau target sudah mati
+                if(!b.target || b.target.hp <= 0) {{
+                    let candidates = boss ? [boss] : enemies;
+                    let minDist = Infinity;
+                    b.target = null;
+                    candidates.forEach(e => {{
+                        let d = Math.hypot(e.x - b.x, e.y - b.y);
+                        if(d < minDist) {{ minDist = d; b.target = e; }}
+                    }});
+                }}
+
+                if(b.target) {{
+                    let a = Math.atan2(b.target.y-b.y, b.target.x-b.x);
+                    b.vx += Math.cos(a) * 1.2;
+                    b.vy += Math.sin(a) * 1.2;
+                }}
+                
+                // Speed limit & Friction
                 let speed = Math.hypot(b.vx, b.vy);
-                if(speed > 12) {{ b.vx = (b.vx/speed)*12; b.vy = (b.vy/speed)*12; }}
+                if(speed > 10) {{ b.vx=(b.vx/speed)*10; b.vy=(b.vy/speed)*10; }}
+                
+                // Trail Effect
+                if(Math.random() > 0.5) particles.push({{x:b.x, y:b.y, vx:0, vy:0, life:10, c:'#ff4500'}});
             }}
+
             b.x += b.vx; b.y += b.vy;
             
             if(b.p) {{
                 if(boss && Math.hypot(boss.x-b.x, boss.y-b.y) < boss.s) {{
                     if(!boss.shieldActive) boss.hp -= b.d;
-                    if(boss.hp <= 0) {{
-                        spawnExplosion(boss.x, boss.y, boss.c, 100);
-                        score += 500; boss = null; lastBossThreshold += 1000;
-                    }}
+                    if(boss.hp <= 0) {{ spawnExplosion(boss.x, boss.y, boss.c, 100); score += 500; boss = null; lastBossThreshold += 1000; }}
                     return false;
                 }}
                 for(let i=enemies.length-1; i>=0; i--) {{
                     let e = enemies[i];
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.d;
-                        if(e.hp<=0) {{ 
-                            player.kills++; if(!boss) score += e.val;
-                            spawnExplosion(e.x, e.y, e.c, 15);
-                            enemies.splice(i, 1); 
-                        }}
+                        if(e.hp<=0) {{ player.kills++; if(!boss) score += e.val; spawnExplosion(e.x, e.y, e.c, 15); enemies.splice(i, 1); }}
                         return false;
                     }}
                 }}
@@ -212,14 +228,14 @@ game_html = f"""
                     return false;
                 }}
             }}
-            return b.x>-50 && b.x<650 && b.y>-50 && b.y<450;
+            return b.x>-100 && b.x<700 && b.y>-100 && b.y<500;
         }});
 
+        // Boss & Enemies Spawn logic (Sama seperti sebelumnya)
         if(score >= lastBossThreshold + 1000 && !boss) {{
             boss = {{ x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1, shieldActive: false, shieldTimer: 0, nextShield: 400 }};
             enemies = [];
         }}
-
         if(boss) {{
             let a = Math.atan2(player.y-boss.y, player.x-boss.x);
             boss.x += Math.cos(a)*boss.sp; boss.y += Math.sin(a)*boss.sp;
@@ -232,7 +248,6 @@ game_html = f"""
             }}
             if(Math.random() < 0.02) {{ for(let i=0; i<3; i++) fire(boss.x, boss.y, a + (Math.random()-0.5), false, false, 1); }}
         }}
-
         if(!boss && enemies.length < 8) {{
             let rand = Math.random();
             let type = rand < 0.2 ? {{ c:'#2ecc71', hp:15, val:15, sp:0.6, s:30 }} : (rand < 0.5 ? {{ c:'#9b59b6', hp:5, val:10, sp:1.8, s:15 }} : {{ c:'#e74c3c', hp:5, val:5, sp:1.2, s:22 }});
@@ -240,7 +255,6 @@ game_html = f"""
             do {{ ex = Math.random() * 600; ey = Math.random() * 400; dist = Math.hypot(ex - player.x, ey - player.y); }} while (dist < 200);
             enemies.push({{ x: ex, y: ey, s: type.s, sp: type.sp, hp: type.hp, c: type.c, val: type.val }});
         }}
-
         enemies.forEach(e => {{
             let a = Math.atan2(player.y-e.y, player.x-e.x);
             e.x += Math.cos(a)*e.sp; e.y += Math.sin(a)*e.sp;
@@ -259,7 +273,6 @@ game_html = f"""
         
         bullets.forEach(b => {{ 
             if(b.rk) {{
-                // Gambar Roket berbentuk Panah >
                 let angle = Math.atan2(b.vy, b.vx);
                 ctx.save();
                 ctx.translate(b.x, b.y);
@@ -267,12 +280,8 @@ game_html = f"""
                 ctx.fillStyle = b.c;
                 ctx.shadowBlur = 10; ctx.shadowColor = b.c;
                 ctx.beginPath();
-                ctx.moveTo(b.r, 0);
-                ctx.lineTo(-b.r, -b.r/1.5);
-                ctx.lineTo(-b.r/2, 0);
-                ctx.lineTo(-b.r, b.r/1.5);
-                ctx.closePath();
-                ctx.fill();
+                ctx.moveTo(b.r, 0); ctx.lineTo(-b.r, -b.r/1.5); ctx.lineTo(-b.r/2, 0); ctx.lineTo(-b.r, b.r/1.5);
+                ctx.closePath(); ctx.fill();
                 ctx.restore();
             }} else {{
                 ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); 
@@ -290,10 +299,8 @@ game_html = f"""
         if(boss) {{
             if(boss.shieldActive) {{
                 ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke();
-                ctx.fillStyle = 'rgba(255, 215, 0, 0.1)'; ctx.fill();
             }}
             drawHexagon(boss.x, boss.y, boss.s, boss.c);
-            ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 6);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 6);
         }}
 
@@ -301,14 +308,10 @@ game_html = f"""
         
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x);
-            ctx.save();
-            ctx.translate(player.x, player.y);
-            ctx.rotate(angle);
-            ctx.shadowBlur = 15; ctx.shadowColor = player.color; ctx.fillStyle = player.color;
-            ctx.beginPath();
-            ctx.moveTo(18, 0); ctx.lineTo(-12, -12); ctx.lineTo(-7, 0); ctx.lineTo(-12, 12);
-            ctx.closePath(); ctx.fill();
-            ctx.restore();
+            ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle);
+            ctx.fillStyle = player.color; ctx.shadowBlur = 15; ctx.shadowColor = player.color;
+            ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, -12); ctx.lineTo(-7, 0); ctx.lineTo(-12, 12);
+            ctx.closePath(); ctx.fill(); ctx.restore();
             if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(player.x,player.y,25,0,7); ctx.stroke(); }}
         }}
         if(gameOver) {{ ctx.fillStyle='white'; ctx.font='40px Arial'; ctx.textAlign='center'; ctx.fillText("GAME OVER", 300, 200); }}

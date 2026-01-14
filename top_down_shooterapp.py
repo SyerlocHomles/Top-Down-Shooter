@@ -63,7 +63,7 @@ if not st.session_state.char:
             
     st.stop()
 
-# --- GAMEPLAY (Kodingan Berikutnya Tetap Sama) ---
+# --- GAMEPLAY ---
 p = st.session_state.char
 game_html = f"""
 <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 4px solid #444; position:relative; font-family: sans-serif; user-select: none;">
@@ -253,7 +253,20 @@ game_html = f"""
             }} else {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }}
         }});
         enemies.forEach(e => {{ ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); if(e.val === 15) {{ ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), 20, 3); ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3); }} }});
-        if(boss) {{ if(boss.shieldActive) {{ ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke(); }} drawHexagon(boss.x, boss.y, boss.s, boss.c); ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 6); }}
+        
+        if(boss) {{ 
+            if(boss.shieldActive) {{ ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke(); }} 
+            drawHexagon(boss.x, boss.y, boss.s, boss.c); 
+            
+            // Health Bar Background
+            ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 8);
+            // Health Bar Foreground
+            ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 8); 
+            // TEXT HP BOSS
+            ctx.fillStyle='white'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+            ctx.fillText(Math.ceil(boss.hp), boss.x, boss.y-72);
+        }}
+
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x); ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.fillStyle = player.color; ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, -12); ctx.lineTo(-7, 0); ctx.lineTo(-12, 12); ctx.closePath(); ctx.fill(); ctx.restore();

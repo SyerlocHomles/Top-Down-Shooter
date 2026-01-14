@@ -108,10 +108,24 @@ game_html = f"""
             setTimeout(() => player.shield = false, 10000);
         }} 
         else if(type === 'scout') {{
-            let a = Math.atan2(my-player.y, mx-player.x);
-            player.x += Math.cos(a)*150; player.y += Math.sin(a)*150;
-            player.inv = 180; 
-            spawnExplosion(player.x, player.y, player.color);
+            if(boss) {{
+                // SCOUT BOSS KILLER DASH
+                let angleToBoss = Math.atan2(boss.y - player.y, boss.x - player.x);
+                // Dash menembus boss (melewati posisi boss sedikit)
+                player.x = boss.x + Math.cos(angleToBoss) * 40;
+                player.y = boss.y + Math.sin(angleToBoss) * 40;
+                player.inv = 120; // Kebal sebentar setelah dash
+                
+                // Damage ke Boss
+                if(!boss.shieldActive) boss.hp -= 400; 
+                spawnExplosion(boss.x, boss.y, "#00ff00", 40);
+            }} else {{
+                // Dash Biasa ke arah Mouse
+                let a = Math.atan2(my-player.y, mx-player.x);
+                player.x += Math.cos(a)*150; player.y += Math.sin(a)*150;
+                player.inv = 60; 
+                spawnExplosion(player.x, player.y, player.color);
+            }}
         }}
         else if(type === 'bomber') {{
             spawnExplosion(player.x, player.y, "#ffff00", 60);
@@ -170,18 +184,18 @@ game_html = f"""
 
         // LOGIKA REGEN SKILL BAR
         if(player.type === 'roket' && boss) {{
-            // SAAT ADA BOSS: Cooldown 5 Detik (100% / (5 * 60 FPS) = 0.33 per frame)
             player.sT = Math.min(100, player.sT + (100 / (5 * 60)));
         }} 
         else if(player.type === 'roket') {{
-            // SAAT TIDAK ADA BOSS: Berdasarkan Kill (8 kills untuk penuh)
             player.sT = (player.kills/8)*100;
         }}
         else if(player.type === 'tank' || player.type === 'bomber') {{
             player.sT = Math.min(100, player.sT + (100/(15*60)));
         }} 
         else if(player.type === 'scout') {{
-            player.sT = Math.min(100, player.sT + (100/(10*60)));
+            // Scout regen lebih cepat saat boss ada agar bisa dash berkali-kali
+            let regenRate = boss ? (100/(6*60)) : (100/(10*60));
+            player.sT = Math.min(100, player.sT + regenRate);
         }} 
         else if(player.type === 'joker') {{
             player.sT = (player.kills/15)*100;

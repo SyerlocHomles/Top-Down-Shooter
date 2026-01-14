@@ -53,10 +53,11 @@ game_html = f"""
 (function() {{
     const canvas = document.getElementById('g'), ctx = canvas.getContext('2d');
     const uScore = document.getElementById('ui-score'), uHP = document.getElementById('ui-hp'),
-          uBar = document.getElementById('skill-bar');
+          uBar = document.getElementById('skill-bar'), uLvl = document.getElementById('ui-lvl');
 
-    let score = 0, health = {p['hp']}, level = 1, gameOver = false;
+    let score = 0, health = {p['hp']}, gameOver = false;
     let keys = {{}}, bullets = [], enemies = [], particles = [], boss = null;
+    let lastBossThreshold = 0;
     
     let player = {{
         x: 300, y: 200, r: 12, speed: {p['spd']},
@@ -74,6 +75,16 @@ game_html = f"""
         spawnExplosion(player.x, player.y, "#ffffff");
         player.inv = 180;
         if(health <= 0) gameOver = true;
+    }}
+
+    function drawHexagon(x, y, size, color) {{
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {{
+            ctx.lineTo(x + size * Math.cos(i * Math.PI / 3), y + size * Math.sin(i * Math.PI / 3));
+        }}
+        ctx.closePath();
+        ctx.fill();
     }}
 
     window.onkeydown = e => {{ keys[e.code] = true; if(e.code==='Space') useUlt(); }};
@@ -107,10 +118,11 @@ game_html = f"""
             enemies.forEach(e => {{
                 if(Math.hypot(e.x-player.x, e.y-player.y) < 180) e.hp -= 200;
             }});
+            if(boss && Math.hypot(boss.x-player.x, boss.y-player.y) < 200) boss.hp -= 300;
         }}
         else if(type === 'roket') {{
             for(let i=0; i<5; i++) {{
-                let target = enemies.length > 0 ? enemies[Math.floor(Math.random()*enemies.length)] : null;
+                let target = boss || (enemies.length > 0 ? enemies[Math.floor(Math.random()*enemies.length)] : null);
                 bullets.push({{ x: player.x, y: player.y, vx: 0, vy: 0, r: 8, c: '#ff0000', p: true, rk: true, target: target, life: 200 }});
             }}
         }}
@@ -144,6 +156,7 @@ game_html = f"""
         if(nx > 0 && nx < 600) player.x=nx;
         if(ny > 0 && ny < 400) player.y=ny;
 
+        // Skill logic
         if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
         else if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100/(10*60)));
         else if(player.type === 'roket') player.sT = (player.kills/10)*100;
@@ -152,6 +165,7 @@ game_html = f"""
 
         uBar.style.width = Math.min(100, player.sT) + '%';
 
+        // Bullets update
         bullets = bullets.filter(b => {{
             if(b.target && b.target.hp > 0) {{
                 let a = Math.atan2(b.target.y-b.y, b.target.x-b.x);
@@ -160,12 +174,25 @@ game_html = f"""
             b.x += b.vx; b.y += b.vy;
             
             if(b.p) {{
+                // Check Boss Collision
+                if(boss && Math.hypot(boss.x-b.x, boss.y-b.y) < boss.s) {{
+                    boss.hp -= b.rk?100:player.dmg;
+                    if(boss.hp <= 0) {{
+                        spawnExplosion(boss.x, boss.y, boss.c, 100);
+                        score += 500;
+                        boss = null;
+                        lastBossThreshold += 1000;
+                    }}
+                    return false;
+                }}
+                // Check Enemy Collision
                 for(let i=enemies.length-1; i>=0; i--) {{
                     let e = enemies[i];
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.rk?100:player.dmg;
                         if(e.hp<=0) {{ 
-                            player.kills++; score += e.val;
+                            player.kills++; 
+                            if(!boss) score += e.val; // Skor hanya nambah kalau tidak ada boss
                             spawnExplosion(e.x, e.y, e.c, 15);
                             enemies.splice(i, 1); 
                         }}
@@ -181,14 +208,25 @@ game_html = f"""
             return b.x>0 && b.x<600 && b.y>0 && b.y<400;
         }});
 
-        enemies.forEach(e => {{
-            let a = Math.atan2(player.y-e.y, player.x-e.x);
-            e.x += Math.cos(a)*e.sp; e.y += Math.sin(a)*e.sp;
-            if(Math.hypot(player.x-e.x, player.y-e.y) < player.r+e.s/2 && player.inv<=0 && !player.shield) triggerRespawn();
-        }});
+        // Boss Logic
+        if(score >= lastBossThreshold + 1000 && !boss) {{
+            boss = {{ x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1 }};
+            enemies = []; // Hapus kroco saat boss datang
+        }}
 
-        // MODIFIKASI SPAWN: Jaga jarak minimal 200px dari player
-        if(enemies.length < 8) {{
+        if(boss) {{
+            let a = Math.atan2(player.y-boss.y, player.x-boss.x);
+            boss.x += Math.cos(a)*boss.sp; boss.y += Math.sin(a)*boss.sp;
+            if(Math.hypot(player.x-boss.x, player.y-boss.y) < player.r+boss.s && player.inv<=0 && !player.shield) triggerRespawn();
+            
+            // Boss Fire
+            if(Math.random() < 0.02) {{
+                for(let i=0; i<3; i++) fire(boss.x, boss.y, a + (Math.random()-0.5), false, false);
+            }}
+        }}
+
+        // Normal Enemies Spawn (hanya jika tidak ada boss)
+        if(!boss && enemies.length < 8) {{
             let rand = Math.random();
             let type;
             if(rand < 0.2) type = {{ c:'#2ecc71', hp:15, val:15, sp:0.6, s:30 }};
@@ -200,20 +238,28 @@ game_html = f"""
                 ex = Math.random() * 600;
                 ey = Math.random() * 400;
                 dist = Math.hypot(ex - player.x, ey - player.y);
-            }} while (dist < 200); // Terus acak jika jarak < 200 piksel
+            }} while (dist < 200);
             
             enemies.push({{ x: ex, y: ey, s: type.s, sp: type.sp, hp: type.hp, c: type.c, val: type.val }});
         }}
+
+        enemies.forEach(e => {{
+            let a = Math.atan2(player.y-e.y, player.x-e.x);
+            e.x += Math.cos(a)*e.sp; e.y += Math.sin(a)*e.sp;
+            if(Math.hypot(player.x-e.x, player.y-e.y) < player.r+e.s/2 && player.inv<=0 && !player.shield) triggerRespawn();
+        }});
 
         particles.forEach((p,i)=>{{ p.x+=p.vx; p.y+=p.vy; p.life--; if(p.life<=0) particles.splice(i,1); }});
         if(player.inv > 0) player.inv--;
         uScore.innerText = "Skor: " + score;
         uHP.innerText = "❤️".repeat(Math.max(0,health));
+        uLvl.innerText = boss ? "BOSS BATTLE!" : "LEVEL: " + (Math.floor(score/1000) + 1);
     }}
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
         bullets.forEach(b => {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }});
+        
         enemies.forEach(e => {{ 
             ctx.fillStyle=e.c; 
             ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
@@ -222,6 +268,14 @@ game_html = f"""
                 ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3);
             }}
         }});
+
+        if(boss) {{
+            drawHexagon(boss.x, boss.y, boss.s, boss.c);
+            // Health bar boss
+            ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 6);
+            ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 6);
+        }}
+
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
         
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{

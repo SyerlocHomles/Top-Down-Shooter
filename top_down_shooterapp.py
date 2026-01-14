@@ -1,8 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Roket Boss Mode", layout="centered")
-st.title("⚔️ Island.io: Roket Boss Mode (5s CD)")
+st.set_page_config(page_title="Island.io: Roket Launcher", layout="centered")
+st.title("⚔️ Island.io: Roket Autolock Launcher")
 
 if "char" not in st.session_state:
     st.session_state.char = None
@@ -96,7 +96,7 @@ game_html = f"""
         let type = forcedType || player.type;
         if(!forcedType && (player.sT < player.sM || gameOver)) return;
         
-        // Reset skill bar
+        // Perbaikan: Jika menggunakan skill, sT harus reset ke 0
         if(!forcedType) {{ 
             player.sT = 0; 
             player.kills = 0; 
@@ -173,13 +173,13 @@ game_html = f"""
         if(nx > 0 && nx < 600) player.x=nx;
         if(ny > 0 && ny < 400) player.y=ny;
 
-        // --- SKILL REGEN LOGIC ---
+        // --- SKILL REGEN PERBAIKAN ---
         if(player.type === 'roket' && boss) {{
-            // Jika ada BOSS, isi skill otomatis (100% / (5 detik * 60 FPS) = 0.33 per frame)
+            // MODA BOSS: Cooldown otomatis 5 detik (100% / (5 detik * 60 FPS) = 0.33 per frame)
             player.sT = Math.min(100, player.sT + (100 / (5 * 60)));
         }} else if(player.type === 'roket') {{
-            // Jika tidak ada boss, kembali ke sistem kill
-            player.sT = (player.kills / 8) * 100;
+            // MODA NORMAL: Berdasarkan Kills
+            player.sT = (player.kills/8)*100;
         }} else if(player.type === 'tank' || player.type === 'bomber') {{
             player.sT = Math.min(100, player.sT + (100/(15*60)));
         }} else if(player.type === 'scout') {{
@@ -191,8 +191,6 @@ game_html = f"""
         }}
 
         uBar.style.width = Math.min(100, player.sT) + '%';
-        // Animasi bar penuh saat Boss Mode
-        uBar.style.boxShadow = (player.sT >= 100) ? "0 0 20px " + player.color : "0 0 10px " + player.color;
 
         bullets = bullets.filter(b => {{
             if(b.rk) {{
@@ -205,7 +203,6 @@ game_html = f"""
                         if(d < minDist) {{ minDist = d; b.target = e; }}
                     }});
                 }
-
                 if(b.target) {{
                     let a = Math.atan2(b.target.y-b.y, b.target.x-b.x);
                     b.vx += Math.cos(a) * 1.2;
@@ -242,7 +239,7 @@ game_html = f"""
         }});
 
         if(score >= lastBossThreshold + 1000 && !boss) {{
-            boss = {{ x: 300, y: -50, s: 50, hp: 2500, mH: 2500, c: '#800000', sp: 1, shieldActive: false, shieldTimer: 0, nextShield: 400 }};
+            boss = {{ x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1, shieldActive: false, shieldTimer: 0, nextShield: 400 }};
             enemies = [];
         }}
         if(boss) {{
@@ -279,28 +276,24 @@ game_html = f"""
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
-        
         bullets.forEach(b => {{ 
             if(b.rk) {{
                 let angle = Math.atan2(b.vy, b.vx);
-                ctx.save();
-                ctx.translate(b.x, b.y);
-                ctx.rotate(angle);
-                ctx.fillStyle = b.c;
-                ctx.shadowBlur = 10; ctx.shadowColor = b.c;
-                ctx.beginPath();
-                ctx.moveTo(b.r, 0); ctx.lineTo(-b.r, -b.r/1.5); ctx.lineTo(-b.r/2, 0); ctx.lineTo(-b.r, b.r/1.5);
-                ctx.closePath(); ctx.fill();
-                ctx.restore();
+                ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(angle);
+                ctx.fillStyle = b.c; ctx.shadowBlur = 10; ctx.shadowColor = b.c;
+                ctx.beginPath(); ctx.moveTo(b.r, 0); ctx.lineTo(-b.r, -b.r/1.5); ctx.lineTo(-b.r/2, 0); ctx.lineTo(-b.r, b.r/1.5);
+                ctx.closePath(); ctx.fill(); ctx.restore();
             }} else {{
                 ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); 
             }}
         }});
-        
         enemies.forEach(e => {{ 
             ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
+            if(e.val === 15) {{
+                ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), 20, 3);
+                ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3);
+            }}
         }});
-
         if(boss) {{
             if(boss.shieldActive) {{
                 ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke();
@@ -308,9 +301,7 @@ game_html = f"""
             drawHexagon(boss.x, boss.y, boss.s, boss.c);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 6);
         }}
-
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
-        
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x);
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle);

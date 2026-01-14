@@ -8,12 +8,11 @@ st.title("⚔️ Island.io: Roket Autolock Launcher")
 if "char" not in st.session_state:
     st.session_state.char = None
 
-# Fungsi untuk reset karakter (agar kembali ke menu pilih)
+# Fungsi untuk reset karakter
 def reset_game():
     st.session_state.char = None
     st.rerun()
 
-# Tombol Reset di UI Streamlit (Opsional sebagai cadangan)
 if st.session_state.char:
     if st.sidebar.button("Kembali Pilih Hero"):
         reset_game()
@@ -24,32 +23,13 @@ if not st.session_state.char:
     c1, c2, c3 = st.columns(3)
     c4, c5, c6 = st.columns(3)
 
-    # Data Karakter Lengkap dengan Statistik Teks
     classes_data = [
-        {
-            "n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 6.5, "t": "assault", "slot": c1,
-            "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Rapid Fire"
-        },
-        {
-            "n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 4.5, "t": "tank", "slot": c2,
-            "stat": "**HP:** ❤️❤️❤️❤️❤️❤️\n\n**SPD:** ⚡\n\n**SKILL:** Iron Shield"
-        },
-        {
-            "n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 8.5, "t": "scout", "slot": c3,
-            "stat": "**HP:** ❤️❤️\n\n**SPD:** ⚡⚡⚡\n\n**SKILL:** Teleport Dash"
-        },
-        {
-            "n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 6.5, "t": "joker", "slot": c4,
-            "stat": "**HP:** ❤️❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Random Gamble"
-        },
-        {
-            "n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 6.0, "t": "bomber", "slot": c5,
-            "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Nuke Blast"
-        },
-        {
-            "n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 6.5, "t": "roket", "slot": c6,
-            "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Homing Missile"
-        }
+        {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 6.5, "t": "assault", "slot": c1, "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Rapid Fire"},
+        {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 4.5, "t": "tank", "slot": c2, "stat": "**HP:** ❤️❤️❤️❤️❤️❤️\n\n**SPD:** ⚡\n\n**SKILL:** Iron Shield"},
+        {"n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 8.5, "t": "scout", "slot": c3, "stat": "**HP:** ❤️❤️\n\n**SPD:** ⚡⚡⚡\n\n**SKILL:** Teleport Dash"},
+        {"n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 6.5, "t": "joker", "slot": c4, "stat": "**HP:** ❤️❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Random Gamble"},
+        {"n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 6.0, "t": "bomber", "slot": c5, "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Nuke Blast"},
+        {"n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 6.5, "t": "roket", "slot": c6, "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Homing Missile"}
     ]
 
     for cls in classes_data:
@@ -58,9 +38,8 @@ if not st.session_state.char:
             if st.button("Pilih " + cls['n'].split()[1], key=cls['t']):
                 st.session_state.char = {"hp": cls["hp"], "spd": cls["spd"], "col": cls["col"], "type": cls["t"]}
                 st.rerun()
-            st.caption(cls["stat"]) # Menampilkan statistik di bawah tombol
+            st.caption(cls["stat"])
             st.write("---")
-            
     st.stop()
 
 # --- GAMEPLAY ---
@@ -97,14 +76,14 @@ game_html = f"""
     const rBtn = document.getElementById('restart-btn');
 
     let score = 0, health = {p['hp']}, gameOver = false;
-    let keys = {{}}, bullets = [], enemies = [], particles = [], boss = null;
+    let keys = {{}}, bullets = [], enemies = [], particles = [], boss = null, items = [];
     let lastBossThreshold = 0;
     
     let player = {{
-        x: 300, y: 200, r: 12, speed: {p['spd']},
+        x: 300, y: 200, r: 12, speed: {p['spd']}, baseSpeed: {p['spd']},
         type: '{p['type']}', color: '{p['col']}',
         sT: 0, sM: 100, shield: false,
-        dmg: 5, inv: 0, kills: 0
+        dmg: 5, inv: 0, kills: 0, tripleShot: 0
     }};
 
     function spawnExplosion(x, y, color, count=15) {{
@@ -113,14 +92,21 @@ game_html = f"""
         }});
     }}
 
+    function spawnItem(x, y) {{
+        let r = Math.random();
+        if(r < 0.15) {{ // 15% chance drop
+            let type = Math.random();
+            if(type < 0.3) items.push({{ x, y, type: 'medkit', c: '#ff4d4d', label: '✚' }});
+            else if(type < 0.6) items.push({{ x, y, type: 'energy', c: '#4deaff', label: '⚡' }});
+            else items.push({{ x, y, type: 'triple', c: '#ffff4d', label: 'Ⅲ' }});
+        }}
+    }}
+
     function triggerRespawn() {{
         health--;
         spawnExplosion(player.x, player.y, "#ffffff");
         player.inv = 180;
-        if(health <= 0) {{
-            gameOver = true;
-            rBtn.style.display = "block";
-        }}
+        if(health <= 0) {{ gameOver = true; rBtn.style.display = "block"; }}
     }}
 
     function drawHexagon(x, y, size, color) {{
@@ -151,8 +137,7 @@ game_html = f"""
         else if(type === 'scout') {{
             if(boss) {{
                 let angleToBoss = Math.atan2(boss.y - player.y, boss.x - player.x);
-                player.x = boss.x + Math.cos(angleToBoss) * 40;
-                player.y = boss.y + Math.sin(angleToBoss) * 40;
+                player.x = boss.x + Math.cos(angleToBoss) * 40; player.y = boss.y + Math.sin(angleToBoss) * 40;
                 player.inv = 120; if(!boss.shieldActive) boss.hp -= 400; 
                 spawnExplosion(boss.x, boss.y, "#00ff00", 40);
             }} else {{
@@ -181,7 +166,16 @@ game_html = f"""
         }}
     }}
 
-    canvas.onmousedown = () => {{ if(!gameOver) fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), false, true, player.dmg); }};
+    canvas.onmousedown = () => {{ 
+        if(gameOver) return;
+        let a = Math.atan2(my-player.y, mx-player.x);
+        fire(player.x, player.y, a, false, true, player.dmg);
+        if(player.tripleShot > 0) {{
+            fire(player.x, player.y, a + 0.2, false, true, player.dmg);
+            fire(player.x, player.y, a - 0.2, false, true, player.dmg);
+            player.tripleShot--;
+        }}
+    }};
 
     function fire(x, y, a, isSpecial, isPlayer, damageValue) {{
         let ox = x + Math.cos(a) * 20, oy = y + Math.sin(a) * 20;
@@ -195,6 +189,7 @@ game_html = f"""
         if(keys['KeyA']) nx-=s; if(keys['KeyD']) nx+=s;
         if(nx > 0 && nx < 600) player.x=nx; if(ny > 0 && ny < 400) player.y=ny;
 
+        // Skill Charging Logic
         if(player.type === 'roket' && boss) player.sT = Math.min(100, player.sT + (100 / (5 * 60)));
         else if(player.type === 'roket') player.sT = (player.kills/8)*100;
         else if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
@@ -203,6 +198,20 @@ game_html = f"""
         else if(player.type === 'assault') player.sT = Math.min(100, player.sT + 0.1);
 
         uBar.style.width = Math.min(100, player.sT) + '%';
+
+        // Items Logic
+        for(let i=items.length-1; i>=0; i--) {{
+            let it = items[i];
+            if(Math.hypot(player.x-it.x, player.y-it.y) < player.r + 15) {{
+                if(it.type === 'medkit') health = Math.min(health + 1, 10);
+                else if(it.type === 'energy') {{ 
+                    player.speed = player.baseSpeed * 1.5; 
+                    setTimeout(() => player.speed = player.baseSpeed, 5000); 
+                }}
+                else if(it.type === 'triple') player.tripleShot += 20;
+                items.splice(i, 1);
+            }}
+        }}
 
         bullets = bullets.filter(b => {{
             if(b.rk) {{
@@ -215,9 +224,23 @@ game_html = f"""
             }}
             b.x += b.vx; b.y += b.vy;
             if(b.p) {{
-                if(boss && Math.hypot(boss.x-b.x, boss.y-b.y) < boss.s) {{ if(!boss.shieldActive) boss.hp -= b.d; if(boss.hp <= 0) {{ spawnExplosion(boss.x, boss.y, boss.c, 100); score += 500; boss = null; lastBossThreshold += 1000; }} return false; }}
+                if(boss && Math.hypot(boss.x-b.x, boss.y-b.y) < boss.s) {{ 
+                    if(!boss.shieldActive) boss.hp -= b.d; 
+                    if(boss.hp <= 0) {{ spawnExplosion(boss.x, boss.y, boss.c, 100); score += 500; boss = null; lastBossThreshold += 1000; }}
+                    return false; 
+                }}
                 for(let i=enemies.length-1; i>=0; i--) {{
-                    let e = enemies[i]; if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{ e.hp -= b.d; if(e.hp<=0) {{ player.kills++; if(!boss) score += e.val; spawnExplosion(e.x, e.y, e.c, 15); enemies.splice(i, 1); }} return false; }}
+                    let e = enemies[i];
+                    if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{ 
+                        e.hp -= b.d; 
+                        if(e.hp<=0) {{ 
+                            player.kills++; if(!boss) score += e.val; 
+                            spawnExplosion(e.x, e.y, e.c, 15); 
+                            spawnItem(e.x, e.y);
+                            enemies.splice(i, 1); 
+                        }} 
+                        return false; 
+                    }}
                 }}
             }} else if(Math.hypot(player.x-b.x, player.y-b.y) < player.r+b.r) {{
                 if(player.inv<=0 && !player.shield) triggerRespawn(); return false;
@@ -247,27 +270,33 @@ game_html = f"""
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
+        
+        // Draw Items
+        items.forEach(it => {{
+            ctx.fillStyle = it.c; ctx.beginPath(); ctx.arc(it.x, it.y, 10, 0, 7); ctx.fill();
+            ctx.fillStyle = 'white'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(it.label, it.x, it.y + 4);
+        }});
+
         bullets.forEach(b => {{ 
             if(b.rk) {{
                 let angle = Math.atan2(b.vy, b.vx); ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(angle); ctx.fillStyle = b.c; ctx.beginPath(); ctx.moveTo(b.r, 0); ctx.lineTo(-b.r, -b.r/1.5); ctx.lineTo(-b.r/2, 0); ctx.lineTo(-b.r, b.r/1.5); ctx.closePath(); ctx.fill(); ctx.restore();
             }} else {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }}
         }});
+        
         enemies.forEach(e => {{ ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); if(e.val === 15) {{ ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), 20, 3); ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3); }} }});
         
         if(boss) {{ 
             if(boss.shieldActive) {{ ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke(); }} 
             drawHexagon(boss.x, boss.y, boss.s, boss.c); 
-            
-            // Health Bar Background
             ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 8);
-            // Health Bar Foreground
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 8); 
-            // TEXT HP BOSS
             ctx.fillStyle='white'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
             ctx.fillText(Math.ceil(boss.hp), boss.x, boss.y-72);
         }}
 
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
+        
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x); ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.fillStyle = player.color; ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, -12); ctx.lineTo(-7, 0); ctx.lineTo(-12, 12); ctx.closePath(); ctx.fill(); ctx.restore();
             if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(player.x,player.y,25,0,7); ctx.stroke(); }}

@@ -67,7 +67,13 @@ game_html = f"""
     }};
 
     function spawnExplosion(x, y, color, count=15) {{
-        for(let i=0; i<count; i++) particles.push({{x,y,vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:25, c:color}});
+        for(let i=0; i<count; i++) particles.push({{
+            x, y, 
+            vx: (Math.random()-0.5)*15, 
+            vy: (Math.random()-0.5)*15, 
+            life: Math.random()*30+10, 
+            c: color
+        }});
     }}
 
     function triggerRespawn() {{
@@ -109,18 +115,13 @@ game_html = f"""
         }} 
         else if(type === 'scout') {{
             if(boss) {{
-                // SCOUT BOSS KILLER DASH
                 let angleToBoss = Math.atan2(boss.y - player.y, boss.x - player.x);
-                // Dash menembus boss (melewati posisi boss sedikit)
                 player.x = boss.x + Math.cos(angleToBoss) * 40;
                 player.y = boss.y + Math.sin(angleToBoss) * 40;
-                player.inv = 120; // Kebal sebentar setelah dash
-                
-                // Damage ke Boss
+                player.inv = 120;
                 if(!boss.shieldActive) boss.hp -= 400; 
                 spawnExplosion(boss.x, boss.y, "#00ff00", 40);
             }} else {{
-                // Dash Biasa ke arah Mouse
                 let a = Math.atan2(my-player.y, mx-player.x);
                 player.x += Math.cos(a)*150; player.y += Math.sin(a)*150;
                 player.inv = 60; 
@@ -128,9 +129,22 @@ game_html = f"""
             }}
         }}
         else if(type === 'bomber') {{
-            spawnExplosion(player.x, player.y, "#ffff00", 60);
-            enemies.forEach(e => {{ if(Math.hypot(e.x-player.x, e.y-player.y) < 180) e.hp -= 200; }});
-            if(boss && !boss.shieldActive && Math.hypot(boss.x-player.x, boss.y-player.y) < 200) boss.hp -= 300;
+            // --- MEGA EXPLOSION BOMBER ---
+            let radius = 350; // Jangkauan luas
+            let damageEnemies = 500;
+            let damageBoss = 800;
+            
+            spawnExplosion(player.x, player.y, "#ffff00", 150); // Partikel sangat banyak
+            
+            enemies.forEach(e => {{ 
+                if(Math.hypot(e.x-player.x, e.y-player.y) < radius) {{
+                    e.hp -= damageEnemies;
+                }}
+            }});
+            
+            if(boss && Math.hypot(boss.x-player.x, boss.y-player.y) < radius) {{
+                if(!boss.shieldActive) boss.hp -= damageBoss;
+            }}
         }}
         else if(type === 'roket') {{
             for(let i=0; i<6; i++) {{
@@ -193,7 +207,6 @@ game_html = f"""
             player.sT = Math.min(100, player.sT + (100/(15*60)));
         }} 
         else if(player.type === 'scout') {{
-            // Scout regen lebih cepat saat boss ada agar bisa dash berkali-kali
             let regenRate = boss ? (100/(6*60)) : (100/(10*60));
             player.sT = Math.min(100, player.sT + regenRate);
         }} 
@@ -217,13 +230,11 @@ game_html = f"""
                         if(d < minDist) {{ minDist = d; b.target = e; }}
                     }});
                 }}
-
                 if(b.target) {{
                     let a = Math.atan2(b.target.y-b.y, b.target.x-b.x);
                     b.vx += Math.cos(a) * 1.2;
                     b.vy += Math.sin(a) * 1.2;
                 }}
-                
                 let speed = Math.hypot(b.vx, b.vy);
                 if(speed > 10) {{ b.vx=(b.vx/speed)*10; b.vy=(b.vy/speed)*10; }}
                 if(Math.random() > 0.5) particles.push({{x:b.x, y:b.y, vx:0, vy:0, life:10, c:'#ff4500'}});
@@ -292,24 +303,17 @@ game_html = f"""
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
-        
         bullets.forEach(b => {{ 
             if(b.rk) {{
                 let angle = Math.atan2(b.vy, b.vx);
-                ctx.save();
-                ctx.translate(b.x, b.y);
-                ctx.rotate(angle);
-                ctx.fillStyle = b.c;
-                ctx.shadowBlur = 10; ctx.shadowColor = b.c;
-                ctx.beginPath();
-                ctx.moveTo(b.r, 0); ctx.lineTo(-b.r, -b.r/1.5); ctx.lineTo(-b.r/2, 0); ctx.lineTo(-b.r, b.r/1.5);
-                ctx.closePath(); ctx.fill();
-                ctx.restore();
+                ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(angle);
+                ctx.fillStyle = b.c; ctx.shadowBlur = 10; ctx.shadowColor = b.c;
+                ctx.beginPath(); ctx.moveTo(b.r, 0); ctx.lineTo(-b.r, -b.r/1.5); ctx.lineTo(-b.r/2, 0); ctx.lineTo(-b.r, b.r/1.5);
+                ctx.closePath(); ctx.fill(); ctx.restore();
             }} else {{
                 ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); 
             }}
         }});
-        
         enemies.forEach(e => {{ 
             ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
             if(e.val === 15) {{
@@ -317,7 +321,6 @@ game_html = f"""
                 ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3);
             }}
         }});
-
         if(boss) {{
             if(boss.shieldActive) {{
                 ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke();
@@ -325,9 +328,7 @@ game_html = f"""
             drawHexagon(boss.x, boss.y, boss.s, boss.c);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 6);
         }}
-
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
-        
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x);
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle);

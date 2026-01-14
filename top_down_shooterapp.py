@@ -100,11 +100,8 @@ game_html = f"""
         if(type === 'tank') {{
             player.shield = true;
             let shots = 0;
-            // Ulti Tank: 3 gelombang tembakan memutar dengan damage tinggi (80 per peluru)
             let interval = setInterval(() => {{
-                for(let a=0; a<Math.PI*2; a+=Math.PI/6) {{
-                    fire(player.x, player.y, a, false, true, 80); 
-                }}
+                for(let a=0; a<Math.PI*2; a+=Math.PI/6) fire(player.x, player.y, a, false, true, 80); 
                 shots++;
                 if(shots >= 3) clearInterval(interval);
             }}, 500);
@@ -126,7 +123,8 @@ game_html = f"""
         else if(type === 'roket') {{
             for(let i=0; i<5; i++) {{
                 let target = boss || (enemies.length > 0 ? enemies[Math.floor(Math.random()*enemies.length)] : null);
-                bullets.push({{ x: player.x, y: player.y, vx: 0, vy: 0, r: 8, c: '#ff0000', p: true, rk: true, target: target, life: 200, d: 100 }});
+                // Roket dibuat dengan rk: true agar digambar sebagai panah >
+                bullets.push({{ x: player.x, y: player.y, vx: 0, vy: 0, r: 10, c: '#ffa500', p: true, rk: true, target: target, life: 250, d: 150 }});
             }}
         }}
         else if(type === 'assault') {{
@@ -168,7 +166,6 @@ game_html = f"""
         if(nx > 0 && nx < 600) player.x=nx;
         if(ny > 0 && ny < 400) player.y=ny;
 
-        // Skill logic
         if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
         else if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100/(10*60)));
         else if(player.type === 'roket') player.sT = (player.kills/10)*100;
@@ -177,36 +174,32 @@ game_html = f"""
 
         uBar.style.width = Math.min(100, player.sT) + '%';
 
-        // Bullets update
         bullets = bullets.filter(b => {{
-            if(b.target && b.target.hp > 0) {{
+            if(b.rk && b.target && b.target.hp > 0) {{
                 let a = Math.atan2(b.target.y-b.y, b.target.x-b.x);
-                b.vx = Math.cos(a)*10; b.vy = Math.sin(a)*10;
+                // Smooth homing
+                b.vx += Math.cos(a) * 0.8;
+                b.vy += Math.sin(a) * 0.8;
+                let speed = Math.hypot(b.vx, b.vy);
+                if(speed > 12) {{ b.vx = (b.vx/speed)*12; b.vy = (b.vy/speed)*12; }}
             }}
             b.x += b.vx; b.y += b.vy;
             
             if(b.p) {{
-                // Check Boss Collision
                 if(boss && Math.hypot(boss.x-b.x, boss.y-b.y) < boss.s) {{
-                    if(!boss.shieldActive) {{
-                        boss.hp -= b.d; // Menggunakan damage dari object bullet
-                        if(boss.hp <= 0) {{
-                            spawnExplosion(boss.x, boss.y, boss.c, 100);
-                            score += 500;
-                            boss = null;
-                            lastBossThreshold += 1000;
-                        }}
+                    if(!boss.shieldActive) boss.hp -= b.d;
+                    if(boss.hp <= 0) {{
+                        spawnExplosion(boss.x, boss.y, boss.c, 100);
+                        score += 500; boss = null; lastBossThreshold += 1000;
                     }}
                     return false;
                 }}
-                // Check Enemy Collision
                 for(let i=enemies.length-1; i>=0; i--) {{
                     let e = enemies[i];
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.d;
                         if(e.hp<=0) {{ 
-                            player.kills++; 
-                            if(!boss) score += e.val;
+                            player.kills++; if(!boss) score += e.val;
                             spawnExplosion(e.x, e.y, e.c, 15);
                             enemies.splice(i, 1); 
                         }}
@@ -219,15 +212,11 @@ game_html = f"""
                     return false;
                 }}
             }}
-            return b.x>0 && b.x<600 && b.y>0 && b.y<400;
+            return b.x>-50 && b.x<650 && b.y>-50 && b.y<450;
         }});
 
-        // Boss Logic
         if(score >= lastBossThreshold + 1000 && !boss) {{
-            boss = {{ 
-                x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1,
-                shieldActive: false, shieldTimer: 0, nextShield: 400
-            }};
+            boss = {{ x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1, shieldActive: false, shieldTimer: 0, nextShield: 400 }};
             enemies = [];
         }}
 
@@ -235,42 +224,20 @@ game_html = f"""
             let a = Math.atan2(player.y-boss.y, player.x-boss.x);
             boss.x += Math.cos(a)*boss.sp; boss.y += Math.sin(a)*boss.sp;
             if(Math.hypot(player.x-boss.x, player.y-boss.y) < player.r+boss.s && player.inv<=0 && !player.shield) triggerRespawn();
-            
             boss.nextShield--;
-            if(boss.nextShield <= 0 && !boss.shieldActive) {{
-                boss.shieldActive = true;
-                boss.shieldTimer = 300; 
-            }}
-
+            if(boss.nextShield <= 0 && !boss.shieldActive) {{ boss.shieldActive = true; boss.shieldTimer = 300; }}
             if(boss.shieldActive) {{
-                boss.shieldTimer--;
-                boss.hp = Math.min(boss.mH, boss.hp + 0.5); 
-                if(boss.shieldTimer <= 0) {{
-                    boss.shieldActive = false;
-                    boss.nextShield = 600 + Math.random()*400;
-                }}
+                boss.shieldTimer--; boss.hp = Math.min(boss.mH, boss.hp + 0.5); 
+                if(boss.shieldTimer <= 0) {{ boss.shieldActive = false; boss.nextShield = 600 + Math.random()*400; }}
             }}
-
-            if(Math.random() < 0.02) {{
-                for(let i=0; i<3; i++) fire(boss.x, boss.y, a + (Math.random()-0.5), false, false, 1);
-            }}
+            if(Math.random() < 0.02) {{ for(let i=0; i<3; i++) fire(boss.x, boss.y, a + (Math.random()-0.5), false, false, 1); }}
         }}
 
-        // Enemies Spawn
         if(!boss && enemies.length < 8) {{
             let rand = Math.random();
-            let type;
-            if(rand < 0.2) type = {{ c:'#2ecc71', hp:15, val:15, sp:0.6, s:30 }};
-            else if(rand < 0.5) type = {{ c:'#9b59b6', hp:5, val:10, sp:1.8, s:15 }};
-            else type = {{ c:'#e74c3c', hp:5, val:5, sp:1.2, s:22 }};
-            
+            let type = rand < 0.2 ? {{ c:'#2ecc71', hp:15, val:15, sp:0.6, s:30 }} : (rand < 0.5 ? {{ c:'#9b59b6', hp:5, val:10, sp:1.8, s:15 }} : {{ c:'#e74c3c', hp:5, val:5, sp:1.2, s:22 }});
             let ex, ey, dist;
-            do {{
-                ex = Math.random() * 600;
-                ey = Math.random() * 400;
-                dist = Math.hypot(ex - player.x, ey - player.y);
-            }} while (dist < 200);
-            
+            do {{ ex = Math.random() * 600; ey = Math.random() * 400; dist = Math.hypot(ex - player.x, ey - player.y); }} while (dist < 200);
             enemies.push({{ x: ex, y: ey, s: type.s, sp: type.sp, hp: type.hp, c: type.c, val: type.val }});
         }}
 
@@ -289,11 +256,31 @@ game_html = f"""
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
-        bullets.forEach(b => {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }});
+        
+        bullets.forEach(b => {{ 
+            if(b.rk) {{
+                // Gambar Roket berbentuk Panah >
+                let angle = Math.atan2(b.vy, b.vx);
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                ctx.rotate(angle);
+                ctx.fillStyle = b.c;
+                ctx.shadowBlur = 10; ctx.shadowColor = b.c;
+                ctx.beginPath();
+                ctx.moveTo(b.r, 0);
+                ctx.lineTo(-b.r, -b.r/1.5);
+                ctx.lineTo(-b.r/2, 0);
+                ctx.lineTo(-b.r, b.r/1.5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }} else {{
+                ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); 
+            }}
+        }});
         
         enemies.forEach(e => {{ 
-            ctx.fillStyle=e.c; 
-            ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
+            ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
             if(e.val === 15) {{
                 ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), 20, 3);
                 ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3);
@@ -302,13 +289,8 @@ game_html = f"""
 
         if(boss) {{
             if(boss.shieldActive) {{
-                ctx.strokeStyle = '#ffd700';
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2);
-                ctx.stroke();
-                ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
-                ctx.fill();
+                ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke();
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.1)'; ctx.fill();
             }}
             drawHexagon(boss.x, boss.y, boss.s, boss.c);
             ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 6);
@@ -327,9 +309,7 @@ game_html = f"""
             ctx.moveTo(18, 0); ctx.lineTo(-12, -12); ctx.lineTo(-7, 0); ctx.lineTo(-12, 12);
             ctx.closePath(); ctx.fill();
             ctx.restore();
-            if(player.shield) {{ 
-                ctx.strokeStyle='#00e5ff'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(player.x,player.y,25,0,7); ctx.stroke();
-            }}
+            if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(player.x,player.y,25,0,7); ctx.stroke(); }}
         }}
         if(gameOver) {{ ctx.fillStyle='white'; ctx.font='40px Arial'; ctx.textAlign='center'; ctx.fillText("GAME OVER", 300, 200); }}
     }}

@@ -1,8 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as cp
 
-st.set_page_config(page_title="Island.io: Roket Launcher", layout="centered")
-st.title("⚔️ Island.io: Roket Autolock Launcher")
+st.set_page_config(page_title="Island.io: Roket Boss Mode", layout="centered")
+st.title("⚔️ Island.io: Roket Boss Mode (5s CD)")
 
 if "char" not in st.session_state:
     st.session_state.char = None
@@ -95,7 +95,12 @@ game_html = f"""
     function useUlt(forcedType = null) {{
         let type = forcedType || player.type;
         if(!forcedType && (player.sT < player.sM || gameOver)) return;
-        if(!forcedType) {{ player.sT = 0; player.kills = 0; }}
+        
+        // Reset skill bar
+        if(!forcedType) {{ 
+            player.sT = 0; 
+            player.kills = 0; 
+        }}
 
         if(type === 'tank') {{
             player.shield = true;
@@ -120,7 +125,6 @@ game_html = f"""
         }}
         else if(type === 'roket') {{
             for(let i=0; i<6; i++) {{
-                // Launcher effect: Peluru muncul berpencar sedikit sebelum autolock
                 let startAngle = (Math.PI * 2 / 6) * i;
                 bullets.push({{ 
                     x: player.x, y: player.y, 
@@ -169,19 +173,29 @@ game_html = f"""
         if(nx > 0 && nx < 600) player.x=nx;
         if(ny > 0 && ny < 400) player.y=ny;
 
-        // Skill Regen
-        if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
-        else if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100/(10*60)));
-        else if(player.type === 'roket') player.sT = (player.kills/8)*100;
-        else if(player.type === 'joker') player.sT = (player.kills/15)*100;
-        else if(player.type === 'assault') player.sT = Math.min(100, player.sT + 0.1);
+        // --- SKILL REGEN LOGIC ---
+        if(player.type === 'roket' && boss) {{
+            // Jika ada BOSS, isi skill otomatis (100% / (5 detik * 60 FPS) = 0.33 per frame)
+            player.sT = Math.min(100, player.sT + (100 / (5 * 60)));
+        }} else if(player.type === 'roket') {{
+            // Jika tidak ada boss, kembali ke sistem kill
+            player.sT = (player.kills / 8) * 100;
+        }} else if(player.type === 'tank' || player.type === 'bomber') {{
+            player.sT = Math.min(100, player.sT + (100/(15*60)));
+        }} else if(player.type === 'scout') {{
+            player.sT = Math.min(100, player.sT + (100/(10*60)));
+        }} else if(player.type === 'joker') {{
+            player.sT = (player.kills/15)*100;
+        }} else if(player.type === 'assault') {{
+            player.sT = Math.min(100, player.sT + 0.1);
+        }}
 
         uBar.style.width = Math.min(100, player.sT) + '%';
+        // Animasi bar penuh saat Boss Mode
+        uBar.style.boxShadow = (player.sT >= 100) ? "0 0 20px " + player.color : "0 0 10px " + player.color;
 
         bullets = bullets.filter(b => {{
-            // ROKET AUTOLOCK LOGIC
             if(b.rk) {{
-                // Cari target terdekat jika tidak ada target atau target sudah mati
                 if(!b.target || b.target.hp <= 0) {{
                     let candidates = boss ? [boss] : enemies;
                     let minDist = Infinity;
@@ -190,19 +204,15 @@ game_html = f"""
                         let d = Math.hypot(e.x - b.x, e.y - b.y);
                         if(d < minDist) {{ minDist = d; b.target = e; }}
                     }});
-                }}
+                }
 
                 if(b.target) {{
                     let a = Math.atan2(b.target.y-b.y, b.target.x-b.x);
                     b.vx += Math.cos(a) * 1.2;
                     b.vy += Math.sin(a) * 1.2;
                 }}
-                
-                // Speed limit & Friction
                 let speed = Math.hypot(b.vx, b.vy);
                 if(speed > 10) {{ b.vx=(b.vx/speed)*10; b.vy=(b.vy/speed)*10; }}
-                
-                // Trail Effect
                 if(Math.random() > 0.5) particles.push({{x:b.x, y:b.y, vx:0, vy:0, life:10, c:'#ff4500'}});
             }}
 
@@ -231,9 +241,8 @@ game_html = f"""
             return b.x>-100 && b.x<700 && b.y>-100 && b.y<500;
         }});
 
-        // Boss & Enemies Spawn logic (Sama seperti sebelumnya)
         if(score >= lastBossThreshold + 1000 && !boss) {{
-            boss = {{ x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1, shieldActive: false, shieldTimer: 0, nextShield: 400 }};
+            boss = {{ x: 300, y: -50, s: 50, hp: 2500, mH: 2500, c: '#800000', sp: 1, shieldActive: false, shieldTimer: 0, nextShield: 400 }};
             enemies = [];
         }}
         if(boss) {{
@@ -290,10 +299,6 @@ game_html = f"""
         
         enemies.forEach(e => {{ 
             ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
-            if(e.val === 15) {{
-                ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), 20, 3);
-                ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3);
-            }}
         }});
 
         if(boss) {{

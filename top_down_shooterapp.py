@@ -12,7 +12,6 @@ st.write("### Pilih Hero Anda:")
 c1, c2, c3 = st.columns(3)
 c4, c5, c6 = st.columns(3)
 
-# Karakter dipercepat: spd dinaikkan secara signifikan
 classes_data = [
     {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 6.5, "t": "assault", "slot": c1},
     {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 4.5, "t": "tank", "slot": c2},
@@ -31,7 +30,6 @@ if not st.session_state.char:
     st.info("Pilih Class untuk bertarung!")
     st.stop()
 
-# Masukkan logika game ke HTML/JavaScript
 p = st.session_state.char
 game_html = f"""
 <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 4px solid #444; position:relative; font-family: sans-serif; user-select: none;">
@@ -47,7 +45,6 @@ game_html = f"""
             <div id="skill-bar" style="width:0%; height:100%; background: {p['col']}; box-shadow: 0 0 10px {p['col']};"></div>
         </div>
     </div>
-    <div id="buff-ui" style="color:#f1c40f; font-size:12px; font-weight:bold; min-height:15px; margin-bottom:5px;"></div>
 
     <canvas id="g" width="600" height="400" style="background:#050505; border: 2px solid #333; border-radius:5px; cursor: crosshair;"></canvas>
 </div>
@@ -56,10 +53,10 @@ game_html = f"""
 (function() {{
     const canvas = document.getElementById('g'), ctx = canvas.getContext('2d');
     const uScore = document.getElementById('ui-score'), uHP = document.getElementById('ui-hp'),
-          uBar = document.getElementById('skill-bar'), uBuff = document.getElementById('buff-ui');
+          uBar = document.getElementById('skill-bar');
 
     let score = 0, health = {p['hp']}, level = 1, gameOver = false;
-    let keys = {{}}, bullets = [], enemies = [], walls = [], particles = [], boss = null;
+    let keys = {{}}, bullets = [], enemies = [], particles = [], boss = null;
     
     let player = {{
         x: 300, y: 200, r: 12, speed: {p['spd']},
@@ -87,7 +84,6 @@ game_html = f"""
     function useUlt(forcedType = null) {{
         let type = forcedType || player.type;
         if(!forcedType && (player.sT < player.sM || gameOver)) return;
-        
         if(!forcedType) {{ player.sT = 0; player.kills = 0; }}
 
         if(type === 'tank') {{
@@ -165,19 +161,17 @@ game_html = f"""
             b.x += b.vx; b.y += b.vy;
             
             if(b.p) {{
-                for(let e of enemies) {{
+                for(let i=enemies.length-1; i>=0; i--) {{
+                    let e = enemies[i];
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.rk?100:player.dmg;
                         if(e.hp<=0) {{ 
                             player.kills++; score += e.val;
-                            spawnExplosion(e.x, e.y, e.c, 10);
-                            enemies.splice(enemies.indexOf(e), 1); 
+                            spawnExplosion(e.x, e.y, e.c, 15);
+                            enemies.splice(i, 1); 
                         }}
                         return false;
                     }}
-                }}
-                if(boss && b.x > boss.x && b.x < boss.x+boss.w && b.y > boss.y && b.y < boss.y+boss.h) {{
-                    boss.hp -= player.dmg; return false;
                 }}
             }} else {{
                 if(Math.hypot(player.x-b.x, player.y-b.y) < player.r+b.r) {{
@@ -194,18 +188,24 @@ game_html = f"""
             if(Math.hypot(player.x-e.x, player.y-e.y) < player.r+e.s/2 && player.inv<=0 && !player.shield) triggerRespawn();
         }});
 
-        if(score >= 300 && !boss) boss = {{x:250, y:50, w:80, h:80, hp:1000, mH:1000}};
-
-        // Logika Spawn Kroco Baru
+        // Logika Spawn dengan modifikasi Ukuran & Kecepatan
         if(enemies.length < 8) {{
             let rand = Math.random();
-            let type = {{ c:'#e74c3c', hp:5, val:5, sp:1.2 }}; // Default Merah
-            if(rand < 0.2) type = {{ c:'#2ecc71', hp:15, val:15, sp:0.8 }}; // Hijau (Lambat tapi tebal)
-            else if(rand < 0.5) type = {{ c:'#9b59b6', hp:5, val:10, sp:1.5 }}; // Ungu (Lebih cepat)
+            let type;
+            if(rand < 0.2) {{
+                // HIJAU: Besar, Lambat, HP 3x tembak
+                type = {{ c:'#2ecc71', hp:15, val:15, sp:0.6, s:30 }};
+            }} else if(rand < 0.5) {{
+                // UNGU: Kecil, Cepat, HP 1x tembak
+                type = {{ c:'#9b59b6', hp:5, val:10, sp:1.8, s:15 }};
+            }} else {{
+                // MERAH: Sedang, Standar, HP 1x tembak
+                type = {{ c:'#e74c3c', hp:5, val:5, sp:1.2, s:22 }};
+            }}
             
             enemies.push({{
                 x:Math.random()*600, y:Math.random()*400, 
-                s:20, sp:type.sp, hp:type.hp, c:type.c, val:type.val
+                s:type.s, sp:type.sp, hp:type.hp, c:type.c, val:type.val
             }});
         }}
 
@@ -221,17 +221,12 @@ game_html = f"""
         enemies.forEach(e => {{ 
             ctx.fillStyle=e.c; 
             ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
-            // Health bar kecil untuk musuh tebal (Hijau)
-            if(e.val === 15) {{
-                ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-15, 20, 3);
-                ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-15, (e.hp/15)*20, 3);
+            if(e.val === 15) {{ // Bar HP khusus Hijau
+                ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), 20, 3);
+                ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3);
             }}
         }});
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
-        if(boss) {{
-            ctx.fillStyle='#ff4d4d'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
-            ctx.fillStyle='#f00'; ctx.fillRect(boss.x, boss.y-12, (boss.hp/boss.mH)*boss.w, 8);
-        }}
         
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x);

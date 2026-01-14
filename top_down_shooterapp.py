@@ -134,7 +134,6 @@ game_html = f"""
     }};
 
     function fire(x, y, a, isRocket, isPlayer) {{
-        // Offset peluru agar tidak kena badan sendiri
         let ox = x + Math.cos(a) * 20;
         let oy = y + Math.sin(a) * 20;
         bullets.push({{ x:ox, y:oy, vx: Math.cos(a)*(isRocket?12:9), vy: Math.sin(a)*(isRocket?12:9), r: isRocket?8:4, c: isPlayer?player.color:'#F00', p: isPlayer, rk: isRocket }});
@@ -150,7 +149,6 @@ game_html = f"""
         if(nx > 0 && nx < 600) player.x=nx;
         if(ny > 0 && ny < 400) player.y=ny;
 
-        // Ulti Charge Logic
         if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
         else if(player.type === 'scout') player.sT = Math.min(100, player.sT + (100/(10*60)));
         else if(player.type === 'roket') player.sT = (player.kills/10)*100;
@@ -217,7 +215,6 @@ game_html = f"""
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x, boss.y-12, (boss.hp/boss.mH)*boss.w, 8);
         }}
         
-        // Draw Arrow Player
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x);
             ctx.save();

@@ -136,7 +136,6 @@ game_html = f"""
     function fire(x, y, a, isRocket, isPlayer) {{
         let ox = x + Math.cos(a) * 20;
         let oy = y + Math.sin(a) * 20;
-        // Peluru dipercepat: multiplier dinaikkan (dari 12:9 ke 18:15)
         bullets.push({{ x:ox, y:oy, vx: Math.cos(a)*(isRocket?18:15), vy: Math.sin(a)*(isRocket?18:15), r: isRocket?8:4, c: isPlayer?player.color:'#F00', p: isPlayer, rk: isRocket }});
     }}
 
@@ -170,7 +169,8 @@ game_html = f"""
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{
                         e.hp -= b.rk?100:player.dmg;
                         if(e.hp<=0) {{ 
-                            player.kills++; score += 10;
+                            player.kills++; score += e.val;
+                            spawnExplosion(e.x, e.y, e.c, 10);
                             enemies.splice(enemies.indexOf(e), 1); 
                         }}
                         return false;
@@ -196,8 +196,17 @@ game_html = f"""
 
         if(score >= 300 && !boss) boss = {{x:250, y:50, w:80, h:80, hp:1000, mH:1000}};
 
-        if(enemies.length < 6) {{
-            enemies.push({{x:Math.random()*600, y:Math.random()*400, s:20, sp:1.2, hp:10}});
+        // Logika Spawn Kroco Baru
+        if(enemies.length < 8) {{
+            let rand = Math.random();
+            let type = {{ c:'#e74c3c', hp:5, val:5, sp:1.2 }}; // Default Merah
+            if(rand < 0.2) type = {{ c:'#2ecc71', hp:15, val:15, sp:0.8 }}; // Hijau (Lambat tapi tebal)
+            else if(rand < 0.5) type = {{ c:'#9b59b6', hp:5, val:10, sp:1.5 }}; // Ungu (Lebih cepat)
+            
+            enemies.push({{
+                x:Math.random()*600, y:Math.random()*400, 
+                s:20, sp:type.sp, hp:type.hp, c:type.c, val:type.val
+            }});
         }}
 
         particles.forEach((p,i)=>{{ p.x+=p.vx; p.y+=p.vy; p.life--; if(p.life<=0) particles.splice(i,1); }});
@@ -209,7 +218,15 @@ game_html = f"""
     function draw() {{
         ctx.clearRect(0,0,600,400);
         bullets.forEach(b => {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }});
-        enemies.forEach(e => {{ ctx.fillStyle='#e74c3c'; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); }});
+        enemies.forEach(e => {{ 
+            ctx.fillStyle=e.c; 
+            ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
+            // Health bar kecil untuk musuh tebal (Hijau)
+            if(e.val === 15) {{
+                ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-15, 20, 3);
+                ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-15, (e.hp/15)*20, 3);
+            }}
+        }});
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
         if(boss) {{
             ctx.fillStyle='#ff4d4d'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);

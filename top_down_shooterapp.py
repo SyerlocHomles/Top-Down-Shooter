@@ -95,12 +95,7 @@ game_html = f"""
     function useUlt(forcedType = null) {{
         let type = forcedType || player.type;
         if(!forcedType && (player.sT < player.sM || gameOver)) return;
-        
-        // Perbaikan: Jika menggunakan skill, sT harus reset ke 0
-        if(!forcedType) {{ 
-            player.sT = 0; 
-            player.kills = 0; 
-        }}
+        if(!forcedType) {{ player.sT = 0; player.kills = 0; }}
 
         if(type === 'tank') {{
             player.shield = true;
@@ -173,20 +168,25 @@ game_html = f"""
         if(nx > 0 && nx < 600) player.x=nx;
         if(ny > 0 && ny < 400) player.y=ny;
 
-        // --- SKILL REGEN PERBAIKAN ---
+        // LOGIKA REGEN SKILL BAR
         if(player.type === 'roket' && boss) {{
-            // MODA BOSS: Cooldown otomatis 5 detik (100% / (5 detik * 60 FPS) = 0.33 per frame)
+            // SAAT ADA BOSS: Cooldown 5 Detik (100% / (5 * 60 FPS) = 0.33 per frame)
             player.sT = Math.min(100, player.sT + (100 / (5 * 60)));
-        }} else if(player.type === 'roket') {{
-            // MODA NORMAL: Berdasarkan Kills
+        }} 
+        else if(player.type === 'roket') {{
+            // SAAT TIDAK ADA BOSS: Berdasarkan Kill (8 kills untuk penuh)
             player.sT = (player.kills/8)*100;
-        }} else if(player.type === 'tank' || player.type === 'bomber') {{
+        }}
+        else if(player.type === 'tank' || player.type === 'bomber') {{
             player.sT = Math.min(100, player.sT + (100/(15*60)));
-        }} else if(player.type === 'scout') {{
+        }} 
+        else if(player.type === 'scout') {{
             player.sT = Math.min(100, player.sT + (100/(10*60)));
-        }} else if(player.type === 'joker') {{
+        }} 
+        else if(player.type === 'joker') {{
             player.sT = (player.kills/15)*100;
-        }} else if(player.type === 'assault') {{
+        }} 
+        else if(player.type === 'assault') {{
             player.sT = Math.min(100, player.sT + 0.1);
         }}
 
@@ -202,12 +202,14 @@ game_html = f"""
                         let d = Math.hypot(e.x - b.x, e.y - b.y);
                         if(d < minDist) {{ minDist = d; b.target = e; }}
                     }});
-                }
+                }}
+
                 if(b.target) {{
                     let a = Math.atan2(b.target.y-b.y, b.target.x-b.x);
                     b.vx += Math.cos(a) * 1.2;
                     b.vy += Math.sin(a) * 1.2;
                 }}
+                
                 let speed = Math.hypot(b.vx, b.vy);
                 if(speed > 10) {{ b.vx=(b.vx/speed)*10; b.vy=(b.vy/speed)*10; }}
                 if(Math.random() > 0.5) particles.push({{x:b.x, y:b.y, vx:0, vy:0, life:10, c:'#ff4500'}});
@@ -276,17 +278,24 @@ game_html = f"""
 
     function draw() {{
         ctx.clearRect(0,0,600,400);
+        
         bullets.forEach(b => {{ 
             if(b.rk) {{
                 let angle = Math.atan2(b.vy, b.vx);
-                ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(angle);
-                ctx.fillStyle = b.c; ctx.shadowBlur = 10; ctx.shadowColor = b.c;
-                ctx.beginPath(); ctx.moveTo(b.r, 0); ctx.lineTo(-b.r, -b.r/1.5); ctx.lineTo(-b.r/2, 0); ctx.lineTo(-b.r, b.r/1.5);
-                ctx.closePath(); ctx.fill(); ctx.restore();
+                ctx.save();
+                ctx.translate(b.x, b.y);
+                ctx.rotate(angle);
+                ctx.fillStyle = b.c;
+                ctx.shadowBlur = 10; ctx.shadowColor = b.c;
+                ctx.beginPath();
+                ctx.moveTo(b.r, 0); ctx.lineTo(-b.r, -b.r/1.5); ctx.lineTo(-b.r/2, 0); ctx.lineTo(-b.r, b.r/1.5);
+                ctx.closePath(); ctx.fill();
+                ctx.restore();
             }} else {{
                 ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); 
             }}
         }});
+        
         enemies.forEach(e => {{ 
             ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
             if(e.val === 15) {{
@@ -294,6 +303,7 @@ game_html = f"""
                 ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3);
             }}
         }});
+
         if(boss) {{
             if(boss.shieldActive) {{
                 ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke();
@@ -301,7 +311,9 @@ game_html = f"""
             drawHexagon(boss.x, boss.y, boss.s, boss.c);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 6);
         }}
+
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
+        
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x);
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle);

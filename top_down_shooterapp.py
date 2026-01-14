@@ -12,14 +12,14 @@ st.write("### Pilih Hero Anda:")
 c1, c2, c3 = st.columns(3)
 c4, c5, c6 = st.columns(3)
 
-# Definisi Data Karakter sesuai permintaan
+# Karakter dipercepat: spd dinaikkan secara signifikan
 classes_data = [
-    {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 4.5, "t": "assault", "slot": c1},
-    {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 2.8, "t": "tank", "slot": c2},
-    {"n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 6.5, "t": "scout", "slot": c3},
-    {"n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 4.5, "t": "joker", "slot": c4},
-    {"n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 4.0, "t": "bomber", "slot": c5},
-    {"n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 4.5, "t": "roket", "slot": c6}
+    {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 6.5, "t": "assault", "slot": c1},
+    {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 4.5, "t": "tank", "slot": c2},
+    {"n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 8.5, "t": "scout", "slot": c3},
+    {"n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 6.5, "t": "joker", "slot": c4},
+    {"n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 6.0, "t": "bomber", "slot": c5},
+    {"n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 6.5, "t": "roket", "slot": c6}
 ]
 
 for cls in classes_data:
@@ -103,7 +103,7 @@ game_html = f"""
         else if(type === 'scout') {{
             let a = Math.atan2(my-player.y, mx-player.x);
             player.x += Math.cos(a)*150; player.y += Math.sin(a)*150;
-            player.inv = 180; // 3s Imun
+            player.inv = 180; 
             spawnExplosion(player.x, player.y, player.color);
         }}
         else if(type === 'bomber') {{
@@ -136,7 +136,8 @@ game_html = f"""
     function fire(x, y, a, isRocket, isPlayer) {{
         let ox = x + Math.cos(a) * 20;
         let oy = y + Math.sin(a) * 20;
-        bullets.push({{ x:ox, y:oy, vx: Math.cos(a)*(isRocket?12:9), vy: Math.sin(a)*(isRocket?12:9), r: isRocket?8:4, c: isPlayer?player.color:'#F00', p: isPlayer, rk: isRocket }});
+        // Peluru dipercepat: multiplier dinaikkan (dari 12:9 ke 18:15)
+        bullets.push({{ x:ox, y:oy, vx: Math.cos(a)*(isRocket?18:15), vy: Math.sin(a)*(isRocket?18:15), r: isRocket?8:4, c: isPlayer?player.color:'#F00', p: isPlayer, rk: isRocket }});
     }}
 
     function update() {{

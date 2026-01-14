@@ -118,7 +118,7 @@ game_html = f"""
             enemies.forEach(e => {{
                 if(Math.hypot(e.x-player.x, e.y-player.y) < 180) e.hp -= 200;
             }});
-            if(boss && Math.hypot(boss.x-player.x, boss.y-player.y) < 200) boss.hp -= 300;
+            if(boss && !boss.shieldActive && Math.hypot(boss.x-player.x, boss.y-player.y) < 200) boss.hp -= 300;
         }}
         else if(type === 'roket') {{
             for(let i=0; i<5; i++) {{
@@ -176,12 +176,14 @@ game_html = f"""
             if(b.p) {{
                 // Check Boss Collision
                 if(boss && Math.hypot(boss.x-b.x, boss.y-b.y) < boss.s) {{
-                    boss.hp -= b.rk?100:player.dmg;
-                    if(boss.hp <= 0) {{
-                        spawnExplosion(boss.x, boss.y, boss.c, 100);
-                        score += 500;
-                        boss = null;
-                        lastBossThreshold += 1000;
+                    if(!boss.shieldActive) {{
+                        boss.hp -= b.rk?100:player.dmg;
+                        if(boss.hp <= 0) {{
+                            spawnExplosion(boss.x, boss.y, boss.c, 100);
+                            score += 500;
+                            boss = null;
+                            lastBossThreshold += 1000;
+                        }}
                     }}
                     return false;
                 }}
@@ -192,7 +194,7 @@ game_html = f"""
                         e.hp -= b.rk?100:player.dmg;
                         if(e.hp<=0) {{ 
                             player.kills++; 
-                            if(!boss) score += e.val; // Skor hanya nambah kalau tidak ada boss
+                            if(!boss) score += e.val;
                             spawnExplosion(e.x, e.y, e.c, 15);
                             enemies.splice(i, 1); 
                         }}
@@ -210,8 +212,11 @@ game_html = f"""
 
         // Boss Logic
         if(score >= lastBossThreshold + 1000 && !boss) {{
-            boss = {{ x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1 }};
-            enemies = []; // Hapus kroco saat boss datang
+            boss = {{ 
+                x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1,
+                shieldActive: false, shieldTimer: 0, nextShield: 400
+            }};
+            enemies = [];
         }}
 
         if(boss) {{
@@ -219,13 +224,29 @@ game_html = f"""
             boss.x += Math.cos(a)*boss.sp; boss.y += Math.sin(a)*boss.sp;
             if(Math.hypot(player.x-boss.x, player.y-boss.y) < player.r+boss.s && player.inv<=0 && !player.shield) triggerRespawn();
             
+            // Boss Shield Skill Logic
+            boss.nextShield--;
+            if(boss.nextShield <= 0 && !boss.shieldActive) {{
+                boss.shieldActive = true;
+                boss.shieldTimer = 300; // 5 detik @60fps
+            }}
+
+            if(boss.shieldActive) {{
+                boss.shieldTimer--;
+                boss.hp = Math.min(boss.mH, boss.hp + 0.5); // Regen HP
+                if(boss.shieldTimer <= 0) {{
+                    boss.shieldActive = false;
+                    boss.nextShield = 600 + Math.random()*400; // Jeda antar shield
+                }}
+            }}
+
             // Boss Fire
             if(Math.random() < 0.02) {{
                 for(let i=0; i<3; i++) fire(boss.x, boss.y, a + (Math.random()-0.5), false, false);
             }}
         }}
 
-        // Normal Enemies Spawn (hanya jika tidak ada boss)
+        // Enemies Spawn
         if(!boss && enemies.length < 8) {{
             let rand = Math.random();
             let type;
@@ -270,6 +291,15 @@ game_html = f"""
         }});
 
         if(boss) {{
+            if(boss.shieldActive) {{
+                ctx.strokeStyle = '#ffd700';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+                ctx.fill();
+            }}
             drawHexagon(boss.x, boss.y, boss.s, boss.c);
             // Health bar boss
             ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 6);

@@ -107,7 +107,6 @@ game_html = f"""
             enemies.forEach(e => {{
                 if(Math.hypot(e.x-player.x, e.y-player.y) < 180) e.hp -= 200;
             }});
-            if(boss && Math.hypot((boss.x+40)-player.x, (boss.y+40)-player.y) < 180) boss.hp -= 500;
         }}
         else if(type === 'roket') {{
             for(let i=0; i<5; i++) {{
@@ -188,25 +187,22 @@ game_html = f"""
             if(Math.hypot(player.x-e.x, player.y-e.y) < player.r+e.s/2 && player.inv<=0 && !player.shield) triggerRespawn();
         }});
 
-        // Logika Spawn dengan modifikasi Ukuran & Kecepatan
+        // MODIFIKASI SPAWN: Jaga jarak minimal 200px dari player
         if(enemies.length < 8) {{
             let rand = Math.random();
             let type;
-            if(rand < 0.2) {{
-                // HIJAU: Besar, Lambat, HP 3x tembak
-                type = {{ c:'#2ecc71', hp:15, val:15, sp:0.6, s:30 }};
-            }} else if(rand < 0.5) {{
-                // UNGU: Kecil, Cepat, HP 1x tembak
-                type = {{ c:'#9b59b6', hp:5, val:10, sp:1.8, s:15 }};
-            }} else {{
-                // MERAH: Sedang, Standar, HP 1x tembak
-                type = {{ c:'#e74c3c', hp:5, val:5, sp:1.2, s:22 }};
-            }}
+            if(rand < 0.2) type = {{ c:'#2ecc71', hp:15, val:15, sp:0.6, s:30 }};
+            else if(rand < 0.5) type = {{ c:'#9b59b6', hp:5, val:10, sp:1.8, s:15 }};
+            else type = {{ c:'#e74c3c', hp:5, val:5, sp:1.2, s:22 }};
             
-            enemies.push({{
-                x:Math.random()*600, y:Math.random()*400, 
-                s:type.s, sp:type.sp, hp:type.hp, c:type.c, val:type.val
-            }});
+            let ex, ey, dist;
+            do {{
+                ex = Math.random() * 600;
+                ey = Math.random() * 400;
+                dist = Math.hypot(ex - player.x, ey - player.y);
+            }} while (dist < 200); // Terus acak jika jarak < 200 piksel
+            
+            enemies.push({{ x: ex, y: ey, s: type.s, sp: type.sp, hp: type.hp, c: type.c, val: type.val }});
         }}
 
         particles.forEach((p,i)=>{{ p.x+=p.vx; p.y+=p.vy; p.life--; if(p.life<=0) particles.splice(i,1); }});
@@ -221,7 +217,7 @@ game_html = f"""
         enemies.forEach(e => {{ 
             ctx.fillStyle=e.c; 
             ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s);
-            if(e.val === 15) {{ // Bar HP khusus Hijau
+            if(e.val === 15) {{
                 ctx.fillStyle='white'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), 20, 3);
                 ctx.fillStyle='#2ecc71'; ctx.fillRect(e.x-10, e.y-(e.s/2+8), (e.hp/15)*20, 3);
             }}

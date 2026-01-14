@@ -24,23 +24,46 @@ if not st.session_state.char:
     c1, c2, c3 = st.columns(3)
     c4, c5, c6 = st.columns(3)
 
+    # Data Karakter Lengkap dengan Statistik Teks
     classes_data = [
-        {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 6.5, "t": "assault", "slot": c1},
-        {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 4.5, "t": "tank", "slot": c2},
-        {"n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 8.5, "t": "scout", "slot": c3},
-        {"n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 6.5, "t": "joker", "slot": c4},
-        {"n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 6.0, "t": "bomber", "slot": c5},
-        {"n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 6.5, "t": "roket", "slot": c6}
+        {
+            "n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 6.5, "t": "assault", "slot": c1,
+            "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Rapid Fire"
+        },
+        {
+            "n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 4.5, "t": "tank", "slot": c2,
+            "stat": "**HP:** ❤️❤️❤️❤️❤️❤️\n\n**SPD:** ⚡\n\n**SKILL:** Iron Shield"
+        },
+        {
+            "n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 8.5, "t": "scout", "slot": c3,
+            "stat": "**HP:** ❤️❤️\n\n**SPD:** ⚡⚡⚡\n\n**SKILL:** Teleport Dash"
+        },
+        {
+            "n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 6.5, "t": "joker", "slot": c4,
+            "stat": "**HP:** ❤️❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Random Gamble"
+        },
+        {
+            "n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 6.0, "t": "bomber", "slot": c5,
+            "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Nuke Blast"
+        },
+        {
+            "n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 6.5, "t": "roket", "slot": c6,
+            "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Homing Missile"
+        }
     ]
 
     for cls in classes_data:
         with cls["slot"]:
-            if st.button(cls["n"]):
+            st.markdown(f"<div style='text-align: center; color: {cls['col']}; font-weight: bold;'>{cls['n']}</div>", unsafe_allow_html=True)
+            if st.button("Pilih " + cls['n'].split()[1], key=cls['t']):
                 st.session_state.char = {"hp": cls["hp"], "spd": cls["spd"], "col": cls["col"], "type": cls["t"]}
                 st.rerun()
+            st.caption(cls["stat"]) # Menampilkan statistik di bawah tombol
+            st.write("---")
+            
     st.stop()
 
-# --- GAMEPLAY ---
+# --- GAMEPLAY (Kodingan Berikutnya Tetap Sama) ---
 p = st.session_state.char
 game_html = f"""
 <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 4px solid #444; position:relative; font-family: sans-serif; user-select: none;">
@@ -96,7 +119,7 @@ game_html = f"""
         player.inv = 180;
         if(health <= 0) {{
             gameOver = true;
-            rBtn.style.display = "block"; // Munculkan tombol saat kalah
+            rBtn.style.display = "block";
         }}
     }}
 

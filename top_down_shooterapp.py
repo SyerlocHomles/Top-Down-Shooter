@@ -101,7 +101,6 @@ game_html = f"""
         sT: 0, sM: 100, shield: false,
         dmg: 5, inv: 0, kills: 0, 
         tripleShot: 0, energyTime: 0,
-        // New Upgrade Stats
         hasFlank: false, hasPet: false, petAngle: 0
     }};
 
@@ -109,7 +108,6 @@ game_html = f"""
         if(type === 'speed') {{ player.baseSpeed += 0.5; player.speed = player.baseSpeed; }}
         if(type === 'flank') {{ player.hasFlank = true; }}
         if(type === 'pet') {{ player.hasPet = true; }}
-        
         upMenu.style.display = "none";
         isPaused = false;
         requestAnimationFrame(loop);
@@ -199,7 +197,7 @@ game_html = f"""
         if(gameOver || isPaused) return;
         let a = Math.atan2(my-player.y, mx-player.x);
         fire(player.x, player.y, a, false, true, player.dmg);
-        if(player.hasFlank) fire(player.x, player.y, a + Math.PI, false, true, player.dmg); // FLANK UPGRADE
+        if(player.hasFlank) fire(player.x, player.y, a + Math.PI, false, true, player.dmg);
         if(player.tripleShot > 0) {{
             fire(player.x, player.y, a + 0.2, false, true, player.dmg);
             fire(player.x, player.y, a - 0.2, false, true, player.dmg);
@@ -215,16 +213,11 @@ game_html = f"""
     function update() {{
         if(gameOver || isPaused) return;
         
-        // --- UPGRADE SYSTEM TRIGGER ---
         if(score >= lastUpgradeScore + 1000) {{
-            isPaused = true;
-            lastUpgradeScore += 1000;
-            currentLvl++;
-            upMenu.style.display = "block";
-            return;
+            isPaused = true; lastUpgradeScore += 1000; currentLvl++;
+            upMenu.style.display = "block"; return;
         }}
 
-        // --- PET LOGIC ---
         if(player.hasPet) {{
             player.petAngle += 0.05;
             if(Math.random() < 0.04) {{
@@ -234,20 +227,15 @@ game_html = f"""
             }}
         }}
 
-        // Speed Logic
         if(player.energyTime > 0) {{
-            player.energyTime--;
-            player.speed = player.baseSpeed * 1.5;
-            energyUI.style.display = "block";
-            energyTimer.innerText = (player.energyTime / 60).toFixed(1);
+            player.energyTime--; player.speed = player.baseSpeed * 1.5;
+            energyUI.style.display = "block"; energyTimer.innerText = (player.energyTime / 60).toFixed(1);
         }} else {{
-            player.speed = player.baseSpeed;
-            energyUI.style.display = "none";
+            player.speed = player.baseSpeed; energyUI.style.display = "none";
         }}
 
         if(player.tripleShot > 0) {{
-            tripleUI.style.display = "block";
-            tripleCount.innerText = player.tripleShot;
+            tripleUI.style.display = "block"; tripleCount.innerText = player.tripleShot;
         }} else {{
             tripleUI.style.display = "none";
         }}
@@ -257,26 +245,14 @@ game_html = f"""
         if(keys['KeyA']) nx-=s; if(keys['KeyD']) nx+=s;
         if(nx > 0 && nx < 600) player.x=nx; if(ny > 0 && ny < 400) player.y=ny;
 
-        // Skill Charging Logic
+        // Skill Charging
         if(player.type === 'roket' && boss) player.sT = Math.min(100, player.sT + (100 / (5 * 60)));
         else if(player.type === 'roket') player.sT = (player.kills/8)*100;
         else if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
         else if(player.type === 'scout') player.sT = Math.min(100, player.sT + (boss ? 100/(6*60) : 100/(10*60)));
         else if(player.type === 'joker') player.sT = (player.kills/15)*100;
         else if(player.type === 'assault') player.sT = Math.min(100, player.sT + 0.1);
-
         uBar.style.width = Math.min(100, player.sT) + '%';
-
-        // Items Logic
-        for(let i=items.length-1; i>=0; i--) {{
-            let it = items[i];
-            if(Math.hypot(player.x-it.x, player.y-it.y) < player.r + 15) {{
-                if(it.type === 'medkit') health = Math.min(health + 1, 10);
-                else if(it.type === 'energy') player.energyTime += 300;
-                else if(it.type === 'triple') player.tripleShot += 20;
-                items.splice(i, 1);
-            }}
-        }}
 
         bullets = bullets.filter(b => {{
             if(b.rk) {{
@@ -297,8 +273,7 @@ game_html = f"""
                 for(let i=enemies.length-1; i>=0; i--) {{
                     let e = enemies[i];
                     if(Math.hypot(e.x-b.x, e.y-b.y) < e.s/2+b.r) {{ 
-                        e.hp -= b.d; 
-                        if(e.hp<=0) {{ player.kills++; if(!boss) score += e.val; spawnExplosion(e.x, e.y, e.c, 15); spawnItem(e.x, e.y); enemies.splice(i, 1); }} 
+                        e.hp -= b.d; if(e.hp<=0) {{ player.kills++; if(!boss) score += e.val; spawnExplosion(e.x, e.y, e.c, 15); spawnItem(e.x, e.y); enemies.splice(i, 1); }} 
                         return false; 
                     }}
                 }}
@@ -308,7 +283,6 @@ game_html = f"""
             return b.x>-100 && b.x<700 && b.y>-100 && b.y<500;
         }});
 
-        // Boss and Enemy Spawning (Rest of logic)
         if(score >= lastBossThreshold + 1000 && !boss) {{ boss = {{ x: 300, y: -50, s: 50, hp: 2000, mH: 2000, c: '#800000', sp: 1, shieldActive: false, shieldTimer: 0, nextShield: 400 }}; enemies = []; }}
         if(boss) {{
             let a = Math.atan2(player.y-boss.y, player.x-boss.x); boss.x += Math.cos(a)*boss.sp; boss.y += Math.sin(a)*boss.sp;
@@ -341,22 +315,26 @@ game_html = f"""
             }} else {{ ctx.fillStyle=b.c; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,7); ctx.fill(); }}
         }});
         enemies.forEach(e => {{ ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); }});
+        
         if(boss) {{ 
             if(boss.shieldActive) {{ ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke(); }} 
             drawHexagon(boss.x, boss.y, boss.s, boss.c); 
+            // BOSS HP BAR
+            ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 8);
+            ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 8);
+            ctx.fillStyle='white'; ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(Math.ceil(boss.hp), boss.x, boss.y-72);
         }}
+
         particles.forEach(p => {{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/25; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
 
-        // DRAW PET
         if(player.hasPet) {{
             ctx.fillStyle = '#ffff4d'; ctx.beginPath(); ctx.arc(player.x + Math.cos(player.petAngle)*35, player.y + Math.sin(player.petAngle)*35, 6, 0, 7); ctx.fill();
-            ctx.strokeStyle = 'white'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.strokeStyle = 'white'; ctx.stroke();
         }}
         
-        // DRAW PLAYER
         if(player.inv <= 0 || (player.inv % 10 < 5)) {{
             let angle = Math.atan2(my - player.y, mx - player.x); ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(angle); ctx.fillStyle = player.color; ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, -12); ctx.lineTo(-7, 0); ctx.lineTo(-12, 12); ctx.closePath(); ctx.fill();
-            if(player.hasFlank) ctx.fillRect(-15, -4, 8, 8); // Flank visual
+            if(player.hasFlank) ctx.fillRect(-15, -4, 8, 8);
             ctx.restore();
             if(player.shield) {{ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(player.x,player.y,25,0,7); ctx.stroke(); }}
         }}

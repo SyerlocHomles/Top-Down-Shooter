@@ -227,6 +227,18 @@ game_html = f"""
             }}
         }}
 
+        // --- ITEM COLLISION LOGIC (PERBAIKAN) ---
+        for(let i = items.length - 1; i >= 0; i--) {{
+            let it = items[i];
+            let dist = Math.hypot(player.x - it.x, player.y - it.y);
+            if(dist < player.r + 10) {{
+                if(it.type === 'medkit') health = Math.min(health + 1, 10);
+                else if(it.type === 'energy') player.energyTime += 300;
+                else if(it.type === 'triple') player.tripleShot += 20;
+                items.splice(i, 1);
+            }}
+        }}
+
         if(player.energyTime > 0) {{
             player.energyTime--; player.speed = player.baseSpeed * 1.5;
             energyUI.style.display = "block"; energyTimer.innerText = (player.energyTime / 60).toFixed(1);
@@ -319,7 +331,6 @@ game_html = f"""
         if(boss) {{ 
             if(boss.shieldActive) {{ ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(boss.x, boss.y, boss.s + 10, 0, Math.PI*2); ctx.stroke(); }} 
             drawHexagon(boss.x, boss.y, boss.s, boss.c); 
-            // BOSS HP BAR
             ctx.fillStyle='#333'; ctx.fillRect(boss.x-40, boss.y-65, 80, 8);
             ctx.fillStyle='#f00'; ctx.fillRect(boss.x-40, boss.y-65, (boss.hp/boss.mH)*80, 8);
             ctx.fillStyle='white'; ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(Math.ceil(boss.hp), boss.x, boss.y-72);

@@ -12,9 +12,28 @@ def reset_game():
     st.session_state.char = None
     st.rerun()
 
+# --- SIDEBAR UNTUK UPGRADE POPUP ---
 if st.session_state.char:
     if st.sidebar.button("Kembali Pilih Hero"):
         reset_game()
+    
+    st.sidebar.write("---")
+    # Menaruh tempat Popup & Riwayat di Sidebar (Sesuai permintaan di gambar)
+    st.sidebar.markdown("""
+        <div id="sidebar-upgrade-container" style="font-family: sans-serif;">
+            <div id="upgrade-menu" style="display:none; background:#1a1a1a; padding:15px; border:2px solid #ffd700; border-radius:10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); margin-bottom: 20px;">
+                <h3 style="color:#ffd700; margin:0 0 10px 0; font-size:16px; text-align:center;">LEVEL UP!</h3>
+                <button onclick="window.applyUpgrade('speed')" style="width:100%; margin-bottom:8px; padding:10px; background:#4deaff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">⚡ SPEED +0.5</button>
+                <button onclick="window.applyUpgrade('flank')" style="width:100%; margin-bottom:8px; padding:10px; background:#ff4d4d; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🛡️ FLANK GUARD</button>
+                <button onclick="window.applyUpgrade('pet')" style="width:100%; padding:10px; background:#ffff4d; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🤖 DRONE PET</button>
+            </div>
+
+            <div id="upgrade-history-list" style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.4); font-size:13px;">
+                <div style="font-weight:bold; margin-bottom:5px; color:rgba(255,255,255,0.6);">RIWAYAT UPGRADE:</div>
+                <div id="hist-content"><i>Belum ada</i></div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- MENU PILIH KARAKTER ---
 if not st.session_state.char:
@@ -44,7 +63,7 @@ if not st.session_state.char:
 # --- GAMEPLAY ---
 p = st.session_state.char
 game_html = f"""
-<div style="display: flex; justify-content: center; align-items: flex-start; gap: 15px;">
+<div style="display: flex; justify-content: center; align-items: flex-start;">
     
     <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 4px solid #444; position:relative; font-family: sans-serif; user-select: none;">
         
@@ -74,32 +93,20 @@ game_html = f"""
             </button>
         </div>
     </div>
-
-    <div style="width: 160px; display: flex; flex-direction: column; gap: 10px; font-family: sans-serif;">
-        
-        <div id="upgrade-menu" style="display:none; background:#1a1a1a; padding:12px; border:2px solid #ffd700; border-radius:10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-            <h3 style="color:#ffd700; margin:0 0 10px 0; font-size:12px; text-align:center;">LEVEL UP!</h3>
-            <button onclick="applyUpgrade('speed')" style="width:100%; margin-bottom:5px; padding:8px 0; background:#4deaff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:10px;">⚡ SPEED +0.5</button>
-            <button onclick="applyUpgrade('flank')" style="width:100%; margin-bottom:5px; padding:8px 0; background:#ff4d4d; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:10px;">🛡️ FLANK GUARD</button>
-            <button onclick="applyUpgrade('pet')" style="width:100%; margin-bottom:5px; padding:8px 0; background:#ffff4d; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:10px;">🤖 DRONE PET</button>
-        </div>
-
-        <div id="upgrade-history-list" style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.4); font-size:11px;">
-            <div style="font-weight:bold; margin-bottom:5px; color:rgba(255,255,255,0.6);">UPGRADES:</div>
-            <div id="hist-content"><i>Belum ada</i></div>
-        </div>
-    </div>
 </div>
 
 <script>
 (function() {{
+    // Komunikasi dengan Sidebar
+    const upMenu = parent.document.getElementById('upgrade-menu');
+    const histContent = parent.document.getElementById('hist-content');
+
     const canvas = document.getElementById('g'), ctx = canvas.getContext('2d');
     const uScore = document.getElementById('ui-score'), uHP = document.getElementById('ui-hp'),
           uBar = document.getElementById('skill-bar'), uLvl = document.getElementById('ui-lvl');
     const energyUI = document.getElementById('energy-status'), energyTimer = document.getElementById('energy-timer');
     const tripleUI = document.getElementById('triple-status'), tripleCount = document.getElementById('triple-count');
-    const upMenu = document.getElementById('upgrade-menu'), rBtn = document.getElementById('restart-btn');
-    const histContent = document.getElementById('hist-content');
+    const rBtn = document.getElementById('restart-btn');
 
     let score = 0, health = {p['hp']}, gameOver = false, isPaused = false;
     let keys = {{}}, bullets = [], enemies = [], particles = [], boss = null, items = [];
@@ -115,18 +122,19 @@ game_html = f"""
         hasFlank: false, hasPet: false, petAngle: 0
     }};
 
-    window.applyUpgrade = function(type) {{
+    // Fungsi Global agar bisa dipanggil dari Sidebar
+    parent.window.applyUpgrade = function(type) {{
         if(type === 'speed') {{ player.baseSpeed += 0.5; player.speed = player.baseSpeed; upgradesTaken.push("⚡ Speed"); }}
         if(type === 'flank') {{ player.hasFlank = true; upgradesTaken.push("🛡️ Flank"); }}
         if(type === 'pet') {{ player.hasPet = true; upgradesTaken.push("🤖 Pet"); }}
         
-        histContent.innerHTML = upgradesTaken.map(u => "• " + u).join("<br>");
-        upMenu.style.display = "none";
+        if(histContent) histContent.innerHTML = upgradesTaken.map(u => "• " + u).join("<br>");
+        if(upMenu) upMenu.style.display = "none";
         isPaused = false;
         requestAnimationFrame(loop);
     }};
 
-    // --- SISANYA ADALAH LOGIKA ASLI KAMU TANPA PERUBAHAN ---
+    // --- LOGIKA ASLI KAMU TANPA PERUBAHAN ---
     function spawnExplosion(x, y, color, count=15) {{
         for(let i=0; i<count; i++) particles.push({{
             x, y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: Math.random()*30+10, c: color
@@ -229,7 +237,7 @@ game_html = f"""
         
         if(score >= lastUpgradeScore + 1000) {{
             isPaused = true; lastUpgradeScore += 1000; currentLvl++;
-            upMenu.style.display = "block"; return;
+            if(upMenu) upMenu.style.display = "block"; return;
         }}
 
         if(player.hasPet) {{
@@ -270,7 +278,6 @@ game_html = f"""
         if(keys['KeyA']) nx-=s; if(keys['KeyD']) nx+=s;
         if(nx > 0 && nx < 600) player.x=nx; if(ny > 0 && ny < 400) player.y=ny;
 
-        // Skill Charging logic aslinya
         if(player.type === 'roket' && boss) player.sT = Math.min(100, player.sT + (100 / (5 * 60)));
         else if(player.type === 'roket') player.sT = (player.kills/8)*100;
         else if(player.type === 'tank' || player.type === 'bomber') player.sT = Math.min(100, player.sT + (100/(15*60)));
@@ -371,4 +378,4 @@ game_html = f"""
 </script>
 """
 
-cp.html(game_html, height=580, width=850)
+cp.html(game_html, height=580, width=800)

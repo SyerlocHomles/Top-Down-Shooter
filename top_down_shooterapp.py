@@ -12,19 +12,25 @@ def reset_game():
     st.session_state.char = None
     st.rerun()
 
-# --- SIDEBAR: HANYA MENAMBAH TEMPAT POPUP ---
+# --- SIDEBAR: DIPERBAIKI POSISI DAN Z-INDEX ---
 if st.session_state.char:
     if st.sidebar.button("Kembali Pilih Hero"):
         reset_game()
     
     st.sidebar.write("---")
+    # Menambahkan CSS inject agar sidebar tidak memotong popup
     st.sidebar.markdown("""
-        <div id="sidebar-upgrade-container" style="font-family: sans-serif;">
-            <div id="upgrade-menu" style="display:none; background:#1a1a1a; padding:15px; border:2px solid #ffd700; border-radius:10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); margin-bottom: 20px;">
+        <style>
+            [data-testid="stSidebar"] {
+                overflow: visible !important;
+            }
+        </style>
+        <div id="sidebar-upgrade-container" style="font-family: sans-serif; position: relative; z-index: 9999;">
+            <div id="upgrade-menu" style="display:none; background:#1a1a1a; padding:15px; border:2px solid #ffd700; border-radius:10px; box-shadow: 0 5px 25px rgba(0,0,0,0.8); margin-bottom: 20px; width: 200px;">
                 <h3 style="color:#ffd700; margin:0 0 10px 0; font-size:16px; text-align:center;">LEVEL UP!</h3>
-                <button onclick="parent.postMessage('speed', '*')" style="width:100%; margin-bottom:8px; padding:10px; background:#4deaff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">⚡ SPEED +0.5</button>
-                <button onclick="parent.postMessage('flank', '*')" style="width:100%; margin-bottom:8px; padding:10px; background:#ff4d4d; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🛡️ FLANK GUARD</button>
-                <button onclick="parent.postMessage('pet', '*')" style="width:100%; padding:10px; background:#ffff4d; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🤖 DRONE PET</button>
+                <button onclick="parent.postMessage('speed', '*')" style="width:100%; margin-bottom:8px; padding:10px; background:#4deaff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; color:black;">⚡ SPEED +0.5</button>
+                <button onclick="parent.postMessage('flank', '*')" style="width:100%; margin-bottom:8px; padding:10px; background:#ff4d4d; border:none; border-radius:4px; font-weight:bold; cursor:pointer; color:black;">🛡️ FLANK GUARD</button>
+                <button onclick="parent.postMessage('pet', '*')" style="width:100%; padding:10px; background:#ffff4d; border:none; border-radius:4px; font-weight:bold; cursor:pointer; color:black;">🤖 DRONE PET</button>
             </div>
             <div id="upgrade-history-list" style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.6); font-size:13px;">
                 <div style="font-weight:bold; margin-bottom:5px;">RIWAYAT UPGRADE:</div>
@@ -33,7 +39,7 @@ if st.session_state.char:
         </div>
     """, unsafe_allow_html=True)
 
-# --- MENU PILIH KARAKTER (ASLI) ---
+# --- MENU PILIH KARAKTER (TIDAK BERUBAH) ---
 if not st.session_state.char:
     st.write("### Pilih Hero Anda:")
     c1, c2, c3 = st.columns(3)
@@ -56,7 +62,7 @@ if not st.session_state.char:
             st.write("---")
     st.stop()
 
-# --- GAMEPLAY (KODING ASLI ANDA + KONEKSI SIDEBAR) ---
+# --- GAMEPLAY (LOGIKA ASLI ANDA) ---
 p = st.session_state.char
 game_html = f"""
 <div style="display: flex; justify-content: center; align-items: flex-start;">
@@ -92,7 +98,6 @@ game_html = f"""
     const tripleUI = document.getElementById('triple-status'), tripleCount = document.getElementById('triple-count');
     const rBtn = document.getElementById('restart-btn');
 
-    // AKSES SIDEBAR
     const upMenu = window.parent.document.getElementById('upgrade-menu');
     const histContent = window.parent.document.getElementById('hist-content');
 
@@ -110,7 +115,6 @@ game_html = f"""
         hasFlank: false, hasPet: false, petAngle: 0
     }};
 
-    // --- JEMBATAN KLIK SIDEBAR KE GAME ---
     window.addEventListener('message', function(e) {{
         const type = e.data;
         if(type === 'speed') {{ player.baseSpeed += 0.5; player.speed = player.baseSpeed; upgradesTaken.push("⚡ Speed"); }}
@@ -122,9 +126,6 @@ game_html = f"""
         isPaused = false;
         requestAnimationFrame(loop);
     }});
-
-    // SEMUA LOGIKA DI BAWAH INI ADALAH ASLI MILIK ANDA (TANPA PERUBAHAN)
-    function applyUpgrade(type) {{ /* Fungsi internal dialihkan ke listener message di atas agar bisa diklik dari sidebar */ }}
 
     function spawnExplosion(x, y, color, count=15) {{
         for(let i=0; i<count; i++) particles.push({{

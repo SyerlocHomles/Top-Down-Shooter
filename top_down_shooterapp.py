@@ -21,12 +21,12 @@ if not st.session_state.char:
     c1, c2, c3 = st.columns(3)
     c4, c5, c6 = st.columns(3)
     classes_data = [
-        {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 6.5, "t": "assault", "slot": c1, "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Rapid Fire"},
-        {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 4.5, "t": "tank", "slot": c2, "stat": "**HP:** ❤️❤️❤️❤️❤️❤️\n\n**SPD:** ⚡\n\n**SKILL:** Iron Shield"},
-        {"n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 8.5, "t": "scout", "slot": c3, "stat": "**HP:** ❤️❤️\n\n**SPD:** ⚡⚡⚡\n\n**SKILL:** Teleport Dash"},
-        {"n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 6.5, "t": "joker", "slot": c4, "stat": "**HP:** ❤️❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Random Gamble"},
-        {"n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 6.0, "t": "bomber", "slot": c5, "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Nuke Blast"},
-        {"n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 6.5, "t": "roket", "slot": c6, "stat": "**HP:** ❤️❤️❤️\n\n**SPD:** ⚡⚡\n\n**SKILL:** Homing Missile"}
+        {"n": "🔴 Assault", "col": "#ff0000", "hp": 3, "spd": 6.5, "t": "assault", "slot": c1},
+        {"n": "🔵 Tank", "col": "#0000ff", "hp": 6, "spd": 4.5, "t": "tank", "slot": c2},
+        {"n": "🟢 Scout", "col": "#00ff00", "hp": 2, "spd": 8.5, "t": "scout", "slot": c3},
+        {"n": "🟣 Joker", "col": "#800080", "hp": 4, "spd": 6.5, "t": "joker", "slot": c4},
+        {"n": "🟡 Bomber", "col": "#ffff00", "hp": 3, "spd": 6.0, "t": "bomber", "slot": c5},
+        {"n": "🟠 Roket", "col": "#ffa500", "hp": 3, "spd": 6.5, "t": "roket", "slot": c6}
     ]
     for cls in classes_data:
         with cls["slot"]:
@@ -34,11 +34,8 @@ if not st.session_state.char:
             if st.button("Pilih " + cls['n'].split()[1], key=cls['t']):
                 st.session_state.char = {"hp": cls["hp"], "spd": cls["spd"], "col": cls["col"], "type": cls["t"]}
                 st.rerun()
-            st.caption(cls["stat"])
-            st.write("---")
-    st.stop()
 
-# --- GAMEPLAY DENGAN LOGIKA ASLI YANG DIKEMBALIKAN ---
+# --- GAMEPLAY DENGAN PERBAIKAN SYNTAX ---
 p = st.session_state.char
 game_html = f"""
 <div style="text-align:center; background:#111; padding:15px; border-radius:15px; border: 4px solid #444; position:relative; font-family: sans-serif; user-select: none;">
@@ -85,7 +82,7 @@ game_html = f"""
         upOv.style.display = 'none'; isPaused = false; requestAnimationFrame(loop);
     }};
 
-    function spawnExplosion(x,y,c,count=15){{ for(let i=0;i<count;i++) particles.push({{x,y,vx:(Math.random()-0.5)*10,vy:(Math.random()-0.5)*10,life:30,c}}); }}
+    function spawnExplosion(x,y,c,count=15) {{ for(let i=0;i<count;i++) particles.push({{x,y,vx:(Math.random()-0.5)*10,vy:(Math.random()-0.5)*10,life:30,c}}); }}
     
     function spawnItem(x, y) {{
         if(Math.random() < 0.25) {{
@@ -99,7 +96,7 @@ game_html = f"""
     let mx=0, my=0; canvas.onmousemove = e => {{ const r = canvas.getBoundingClientRect(); mx=e.clientX-r.left; my=e.clientY-r.top; }};
     canvas.onmousedown = () => {{ if(!isPaused && !gameOver) fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x), true, 5); if(player.hasFlank) fire(player.x, player.y, Math.atan2(my-player.y, mx-player.x)+Math.PI, true, 5); }};
 
-    function fire(x,y,a,p,d,rk=false){{ bullets.push({{x,y,vx:Math.cos(a)*12,vy:Math.sin(a)*12,r:rk?10:4,c:p?player.color:'#F00',p,d,rk,target:null}}); }}
+    function fire(x,y,a,p,d,rk=false) {{ bullets.push({{x,y,vx:Math.cos(a)*12,vy:Math.sin(a)*12,r:rk?10:4,c:p?player.color:'#F00',p,d,rk,target:null}}); }}
 
     function useUlt() {{
         if(player.sT < player.sM || isPaused) return;
@@ -112,31 +109,25 @@ game_html = f"""
     function update() {{
         if(gameOver || isPaused) return;
 
-        // Upgrade Check
         if(score >= lastUpgradeScore + 1000) {{ isPaused = true; lastUpgradeScore += 1000; upOv.style.display='flex'; return; }}
 
-        // Player Move & Arena Boundary
         let s = player.baseSpeed;
-        if(keys['KeyW'] && player.y > 0) player.y -= s;
-        if(keys['KeyS'] && player.y < 400) player.y += s;
-        if(keys['KeyA'] && player.x > 0) player.x -= s;
-        if(keys['KeyD'] && player.x < 600) player.x += s;
+        if(keys['KeyW'] && player.y > 15) player.y -= s;
+        if(keys['KeyS'] && player.y < 385) player.y += s;
+        if(keys['KeyA'] && player.x > 15) player.x -= s;
+        if(keys['KeyD'] && player.x < 585) player.x += s;
 
-        // Skill Recharge (Roket: Kill-based, Others: Time-based)
         if(player.type === 'roket') player.sT = (player.kills/8)*100;
         else player.sT = Math.min(100, player.sT + 0.2);
         uBar.style.width = player.sT + "%";
 
-        // Pet
         if(player.hasPet) {{ player.petAngle += 0.05; if(Math.random()<0.03) fire(player.x+Math.cos(player.petAngle)*35, player.y+Math.sin(player.petAngle)*35, player.petAngle, true, 5); }}
 
-        // Items
         items = items.filter(it => {{
             if(Math.hypot(player.x-it.x, player.y-it.y) < 25) {{ if(it.type==='med') health=Math.min(10,health+1); return false; }}
             return true;
         }});
 
-        // Bullets
         bullets = bullets.filter(b => {{
             b.x += b.vx; b.y += b.vy;
             if(b.rk) {{ 
@@ -153,13 +144,12 @@ game_html = f"""
                         return false;
                     }}
                 }}
-            } else {{
+            }} else {{
                 if(Math.hypot(b.x-player.x, b.y-player.y)<player.r && player.inv<=0){{ health--; player.inv=120; if(health<=0) gameOver=true; return false; }}
             }}
             return b.x>0 && b.x<600 && b.y>0 && b.y<400;
         }});
 
-        // Enemies Spawn (Safe Distance)
         if(!boss && enemies.length < 8) {{
             let ex, ey; do {{ ex=Math.random()*600; ey=Math.random()*400; }} while(Math.hypot(ex-player.x, ey-player.y)<200);
             let r=Math.random();
@@ -178,6 +168,7 @@ game_html = f"""
             if(boss.hp<=0){{ score+=500; lastBossThreshold+=1000; boss=null; }}
         }}
 
+        particles.forEach((p,i) => {{ p.life--; if(p.life<=0) particles.splice(i,1); }});
         if(player.inv>0) player.inv--;
         uScore.innerText = "Skor: " + score; uHP.innerText = "❤️".repeat(health);
         if(gameOver) document.getElementById('restart-btn').style.display='block';
@@ -190,6 +181,7 @@ game_html = f"""
         enemies.forEach(e=>{{ ctx.fillStyle=e.c; ctx.fillRect(e.x-e.s/2, e.y-e.s/2, e.s, e.s); }});
         if(boss){{ ctx.fillStyle=boss.c; ctx.beginPath(); ctx.arc(boss.x,boss.y,boss.s,0,7); ctx.fill(); }}
         if(player.hasPet){{ ctx.fillStyle='#ffff4d'; ctx.beginPath(); ctx.arc(player.x+Math.cos(player.petAngle)*35, player.y+Math.sin(player.petAngle)*35, 6,0,7); ctx.fill(); }}
+        particles.forEach(p=>{{ ctx.fillStyle=p.c; ctx.globalAlpha=p.life/30; ctx.fillRect(p.x,p.y,3,3); ctx.globalAlpha=1; }});
         
         if(player.inv<=0 || player.inv%10<5){{
             ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(Math.atan2(my-player.y, mx-player.x));

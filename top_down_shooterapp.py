@@ -166,6 +166,14 @@ if(bosses.length===0&&!gameOver&&enemies.length<8){{let rand=Math.random();let t
 enemies.forEach(e=>{{let a=Math.atan2(p.y-e.y,p.x-e.x);e.x+=Math.cos(a)*e.sp;e.y+=Math.sin(a)*e.sp;if(Math.hypot(p.x-e.x,p.y-e.y)<p.r+e.s/2&&p.inv<=0&&!p.shield)triggerRespawn()}});
 particles.forEach((pt,i)=>{{pt.x+=pt.vx;pt.y+=pt.vy;pt.life--;if(pt.life<=0)particles.splice(i,1)}});
 if(p.inv>0)p.inv--;
+
+// Check if score reached threshold and no boss active
+if(score>=nextStageScore&&bosses.length===0&&stageState==='combat'&&!gameOver){{
+stageState='boss-ready';
+if(stage===1||stage===2)spawnMiniBoss(stage===2);
+else if(stage===3)spawnMainBoss();
+}}
+
 uScore.innerText="Skor: "+score;uHP.innerText="❤️".repeat(Math.max(0,health));uStage.innerText=bosses.length>0?(bosses[0].type==='main'?"⚠️ BOSS BATTLE! ⚠️":`STAGE: ${{chapter}}-${{stage}}`):`STAGE: ${{chapter}}-${{stage}}`}}
 
 function draw(){{ctx.clearRect(0,0,600,400);

@@ -192,10 +192,7 @@ uScore.innerText="Skor: "+score;uHP.innerText="❤️".repeat(Math.max(0,health)
 function draw(){{ctx.clearRect(0,0,600,400);
 items.forEach(it=>{{ctx.fillStyle=it.c;ctx.beginPath();ctx.arc(it.x,it.y,10,0,7);ctx.fill();ctx.fillStyle='white';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.fillText(it.label,it.x,it.y+4)}});
 bullets.forEach(b=>{{if(b.rk){{let ang=Math.atan2(b.vy,b.vx);ctx.save();ctx.translate(b.x,b.y);ctx.rotate(ang);ctx.fillStyle=b.c;ctx.beginPath();ctx.moveTo(b.r,0);ctx.lineTo(-b.r,-b.r/1.5);ctx.lineTo(-b.r/2,0);ctx.lineTo(-b.r,b.r/1.5);ctx.closePath();ctx.fill();ctx.restore()}}else{{ctx.fillStyle=b.c;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill()}}}});
-enemies.forEach(e=>{{ctx.fillStyle=e.c;ctx.fillRect(e.x-e.s/2,e.y-e.s/2,e.s,e.s);
-if(e.canShoot){{ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(e.x,e.y-e.s/2-5,3,0,7);ctx.fill()}}
-if(e.canDash&&e.dashActive){{ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(e.x-e.s/2-3,e.y-e.s/2-3,e.s+6,e.s+6)}}
-if(e.val>=15){{ctx.fillStyle='white';ctx.fillRect(e.x-10,e.y-(e.s/2+8),20,3);ctx.fillStyle='#2e7';ctx.fillRect(e.x-10,e.y-(e.s/2+8),(e.hp/20)*20,3)}}}} );
+enemies.forEach(e=>{{ctx.fillStyle=e.c;ctx.fillRect(e.x-e.s/2,e.y-e.s/2,e.s,e.s);if(e.val===15){{ctx.fillStyle='white';ctx.fillRect(e.x-10,e.y-(e.s/2+8),20,3);ctx.fillStyle='#2e7';ctx.fillRect(e.x-10,e.y-(e.s/2+8),(e.hp/15)*20,3)}}}} );
 bosses.forEach(boss=>{{if(boss.shieldActive){{ctx.strokeStyle='#fd7';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,boss.s+10,0,Math.PI*2);ctx.stroke()}}
 let bCol=boss.c;if(boss.type==='main'){{let glowInt=Math.sin(boss.glow)*.3+.7;bCol=`rgba(139,0,0,${{glowInt}})`}}drawHex(boss.x,boss.y,boss.s,bCol);
 ctx.fillStyle='#333';ctx.fillRect(boss.x-40,boss.y-65,80,8);ctx.fillStyle='#f00';ctx.fillRect(boss.x-40,boss.y-65,(boss.hp/boss.mH)*80,8);ctx.fillStyle='white';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.fillText(Math.ceil(boss.hp),boss.x,boss.y-72)}});

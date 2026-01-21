@@ -92,7 +92,7 @@ const transSub=document.getElementById('transition-subtitle');
 
 let score=0,health={p['hp']},gameOver=false;
 let keys={{}},bullets=[],enemies=[],particles=[],bosses=[],items=[];
-let chapter=1,stage=1,stageState='combat',transTimer=0,nextStageScore=1000;
+let chapter=1,stage=1,stageState='combat',transTimer=0,nextStageScore=1000,bossDefeated=false;
 
 let p={{x:300,y:200,r:12,speed:{p['spd']},baseSpeed:{p['spd']},
 type:'{p['type']}',color:'{p['col']}',sT:0,sM:100,shield:false,
@@ -107,7 +107,7 @@ function showTrans(title,sub,dur=180){{transEl.style.display='block';transText.i
 function spawnMiniBoss(enh=false){{let hp=enh?1200:800;let sp=enh?1.3:1;bosses.push({{x:300,y:-50,s:35,hp,mH:hp,c:'#9b59b6',sp,shieldActive:false,shieldTimer:0,nextShield:600,fireRate:enh?30:60,fireTimer:0,dashTimer:enh?600:0,dashCD:enh?600:0,type:'mini',variant:enh?'enhanced':'basic'}})}}
 function spawnMainBoss(){{bosses.push({{x:300,y:-50,s:60,hp:3000,mH:3000,c:'#8B0000',sp:.8,shieldActive:false,shieldTimer:0,nextShield:800,fireRate:40,fireTimer:0,summonTimer:300,summonCD:600,type:'main',phase:1,glow:0}})}}
 
-function advanceStage(){{stage++;if(stage>3){{stage=1;chapter++;showTrans(`CHAPTER ${{chapter}}`,'NEW WORLD!',240)}}else{{if(stage===3)showTrans(`⚠️ STAGE ${{chapter}}-${{stage}} ⚠️`,'BOSS INCOMING!',240);else showTrans(`STAGE ${{chapter}}-${{stage}}`,'GET READY!',180)}}if(stage===1){{health=Math.min(health+3,10);spawnItem(300,200)}}else health=Math.min(health+1,10);nextStageScore=score+1000;stageState='transition'}}
+function advanceStage(){{stage++;bossDefeated=false;if(stage>3){{stage=1;chapter++;showTrans(`CHAPTER ${{chapter}}`,'NEW WORLD!',240)}}else{{if(stage===3)showTrans(`⚠️ STAGE ${{chapter}}-${{stage}} ⚠️`,'BOSS INCOMING!',240);else showTrans(`STAGE ${{chapter}}-${{stage}}`,'GET READY!',180)}}if(stage===1){{health=Math.min(health+3,10);spawnItem(300,200)}}else health=Math.min(health+1,10);nextStageScore=score+1000;stageState='transition'}}
 
 window.onkeydown=e=>{{keys[e.code]=true;if(e.code==='Space')useUlt()}};
 window.onkeyup=e=>keys[e.code]=false;

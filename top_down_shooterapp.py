@@ -160,12 +160,25 @@ boss.fireTimer++;if(boss.fireTimer>=boss.fireRate){{boss.fireTimer=0;if(boss.var
 if(boss.variant==='enhanced'&&boss.dashTimer>0){{boss.dashTimer--;if(boss.dashTimer===0){{boss.dashCD=600;let da=Math.atan2(p.y-boss.y,p.x-boss.x);boss.x+=Math.cos(da)*100;boss.y+=Math.sin(da)*100;spawnExplosion(boss.x,boss.y,boss.c,20)}}}}else if(boss.variant==='enhanced'&&boss.dashCD>0){{boss.dashCD--;if(boss.dashCD===0)boss.dashTimer=30}}
 if(boss.type==='main'){{boss.summonTimer--;if(boss.summonTimer<=0){{let sCt=boss.phase===2?2:1;for(let k=0;k<sCt;k++){{let ang=(Math.PI*2/sCt)*k;let sX=boss.x+Math.cos(ang)*80,sY=boss.y+Math.sin(ang)*80;bosses.push({{x:sX,y:sY,s:30,hp:600,mH:600,c:'rgba(155,89,182,0.7)',sp:1.1,shieldActive:false,shieldTimer:0,nextShield:999999,fireRate:80,fireTimer:0,type:'summon',variant:'summoned'}})}}boss.summonTimer=boss.summonCD;for(let m=0;m<3;m++){{let ex=Math.random()*600,ey=Math.random()*400;enemies.push({{x:ex,y:ey,s:22,sp:1.2,hp:5,c:'#e74',val:5}})}}}}
 if(boss.hp<=boss.mH*.5&&boss.phase===1){{boss.phase=2;boss.sp=1.2;boss.fireRate=25;boss.summonCD=400;spawnExplosion(boss.x,boss.y,'#FD7',50)}}boss.glow=(boss.glow+.05)%(Math.PI*2)}}
-if(boss.hp<=0){{let bonus=boss.type==='main'?1500:500;score+=bonus;spawnExplosion(boss.x,boss.y,boss.c,boss.type==='main'?100:50);spawnItem(boss.x,boss.y);if(boss.type==='main'){{for(let n=0;n<3;n++)spawnItem(boss.x+Math.random()*60-30,boss.y+Math.random()*60-30)}}bosses.splice(i,1);if(bosses.length===0&&!gameOver)advanceStage()}}}}
+if(boss.hp<=0){{let bonus=boss.type==='main'?1500:500;score+=bonus;spawnExplosion(boss.x,boss.y,boss.c,boss.type==='main'?100:50);spawnItem(boss.x,boss.y);if(boss.type==='main'){{for(let n=0;n<3;n++)spawnItem(boss.x+Math.random()*60-30,boss.y+Math.random()*60-30)}}bosses.splice(i,1);if(bosses.length===0&&!gameOver){{if(boss.type==='main')advanceStage();else{{bossDefeated=true;showTrans(`MINI BOSS DEFEATED!`,'Fight enhanced enemies!',120)}}}}}}
 
-if(bosses.length===0&&!gameOver&&enemies.length<8){{let rand=Math.random();let type=rand<.2?{{c:'#2e7',hp:15,val:15,sp:.6,s:30}}:(rand<.5?{{c:'#95b',hp:5,val:10,sp:1.8,s:15}}:{{c:'#e74',hp:5,val:5,sp:1.2,s:22}});let ex,ey,dist;do{{ex=Math.random()*600;ey=Math.random()*400;dist=Math.hypot(ex-p.x,ey-p.y)}}while(dist<200);enemies.push({{x:ex,y:ey,s:type.s,sp:type.sp,hp:type.hp,c:type.c,val:type.val}})}}
-enemies.forEach(e=>{{let a=Math.atan2(p.y-e.y,p.x-e.x);e.x+=Math.cos(a)*e.sp;e.y+=Math.sin(a)*e.sp;if(Math.hypot(p.x-e.x,p.y-e.y)<p.r+e.s/2&&p.inv<=0&&!p.shield)triggerRespawn()}});
+if(bosses.length===0&&!gameOver&&enemies.length<8){{let rand=Math.random();let type;
+if(bossDefeated&&stage===1){{type={{c:'#e74',hp:8,val:8,sp:1.4,s:22,canShoot:true,shootCD:120,shootTimer:0}};}}
+else if(bossDefeated&&stage===2){{type={{c:'#2e7',hp:20,val:20,sp:.8,s:30,canShoot:true,shootCD:90,shootTimer:0}};}}
+else if(bossDefeated&&stage===3){{type={{c:'#95b',hp:8,val:15,sp:2.2,s:15,canDash:true,dashCD:180,dashTimer:0,dashActive:false}};}}
+else{{type=rand<.2?{{c:'#2e7',hp:15,val:15,sp:.6,s:30}}:(rand<.5?{{c:'#95b',hp:5,val:10,sp:1.8,s:15}}:{{c:'#e74',hp:5,val:5,sp:1.2,s:22}})}}
+let ex,ey,dist;do{{ex=Math.random()*600;ey=Math.random()*400;dist=Math.hypot(ex-p.x,ey-p.y)}}while(dist<200);enemies.push({{x:ex,y:ey,s:type.s,sp:type.sp,hp:type.hp,c:type.c,val:type.val,canShoot:type.canShoot||false,shootCD:type.shootCD||0,shootTimer:type.shootTimer||0,canDash:type.canDash||false,dashCD:type.dashCD||0,dashTimer:type.dashTimer||0,dashActive:type.dashActive||false}})}}
+enemies.forEach(e=>{{let a=Math.atan2(p.y-e.y,p.x-e.x);
+if(e.canDash){{if(e.dashActive){{e.dashTimer--;if(e.dashTimer<=0){{e.dashActive=false;e.dashCD=180}}else{{e.x+=Math.cos(a)*e.sp*3;e.y+=Math.sin(a)*e.sp*3}}}}else{{e.x+=Math.cos(a)*e.sp;e.y+=Math.sin(a)*e.sp;e.dashCD--;if(e.dashCD<=0){{e.dashActive=true;e.dashTimer=20;spawnExplosion(e.x,e.y,e.c,10)}}}}}}else{{e.x+=Math.cos(a)*e.sp;e.y+=Math.sin(a)*e.sp}}
+if(e.canShoot){{e.shootTimer++;if(e.shootTimer>=e.shootCD){{e.shootTimer=0;fire(e.x,e.y,a,false,false,1)}}}}
+if(Math.hypot(p.x-e.x,p.y-e.y)<p.r+e.s/2&&p.inv<=0&&!p.shield)triggerRespawn()}});
 particles.forEach((pt,i)=>{{pt.x+=pt.vx;pt.y+=pt.vy;pt.life--;if(pt.life<=0)particles.splice(i,1)}});
 if(p.inv>0)p.inv--;
+
+// Check if ready to advance to next stage after boss defeated
+if(bossDefeated&&score>=nextStageScore&&bosses.length===0&&stageState==='combat'&&!gameOver){{
+advanceStage();
+}}
 
 // Check if score reached threshold and no boss active
 if(score>=nextStageScore&&bosses.length===0&&stageState==='combat'&&!gameOver){{
@@ -179,7 +192,10 @@ uScore.innerText="Skor: "+score;uHP.innerText="❤️".repeat(Math.max(0,health)
 function draw(){{ctx.clearRect(0,0,600,400);
 items.forEach(it=>{{ctx.fillStyle=it.c;ctx.beginPath();ctx.arc(it.x,it.y,10,0,7);ctx.fill();ctx.fillStyle='white';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.fillText(it.label,it.x,it.y+4)}});
 bullets.forEach(b=>{{if(b.rk){{let ang=Math.atan2(b.vy,b.vx);ctx.save();ctx.translate(b.x,b.y);ctx.rotate(ang);ctx.fillStyle=b.c;ctx.beginPath();ctx.moveTo(b.r,0);ctx.lineTo(-b.r,-b.r/1.5);ctx.lineTo(-b.r/2,0);ctx.lineTo(-b.r,b.r/1.5);ctx.closePath();ctx.fill();ctx.restore()}}else{{ctx.fillStyle=b.c;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill()}}}});
-enemies.forEach(e=>{{ctx.fillStyle=e.c;ctx.fillRect(e.x-e.s/2,e.y-e.s/2,e.s,e.s);if(e.val===15){{ctx.fillStyle='white';ctx.fillRect(e.x-10,e.y-(e.s/2+8),20,3);ctx.fillStyle='#2e7';ctx.fillRect(e.x-10,e.y-(e.s/2+8),(e.hp/15)*20,3)}}}} );
+enemies.forEach(e=>{{ctx.fillStyle=e.c;ctx.fillRect(e.x-e.s/2,e.y-e.s/2,e.s,e.s);
+if(e.canShoot){{ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(e.x,e.y-e.s/2-5,3,0,7);ctx.fill()}}
+if(e.canDash&&e.dashActive){{ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(e.x-e.s/2-3,e.y-e.s/2-3,e.s+6,e.s+6)}}
+if(e.val>=15){{ctx.fillStyle='white';ctx.fillRect(e.x-10,e.y-(e.s/2+8),20,3);ctx.fillStyle='#2e7';ctx.fillRect(e.x-10,e.y-(e.s/2+8),(e.hp/20)*20,3)}}}} );
 bosses.forEach(boss=>{{if(boss.shieldActive){{ctx.strokeStyle='#fd7';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,boss.s+10,0,Math.PI*2);ctx.stroke()}}
 let bCol=boss.c;if(boss.type==='main'){{let glowInt=Math.sin(boss.glow)*.3+.7;bCol=`rgba(139,0,0,${{glowInt}})`}}drawHex(boss.x,boss.y,boss.s,bCol);
 ctx.fillStyle='#333';ctx.fillRect(boss.x-40,boss.y-65,80,8);ctx.fillStyle='#f00';ctx.fillRect(boss.x-40,boss.y-65,(boss.hp/boss.mH)*80,8);ctx.fillStyle='white';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.fillText(Math.ceil(boss.hp),boss.x,boss.y-72)}});
